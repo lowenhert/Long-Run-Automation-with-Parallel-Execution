@@ -1,0 +1,226 @@
+test_cases:
+
+  - id: 1
+    app_name: "SunNxt"
+    navigation:
+      down_presses: 2
+      right_presses: 5
+    verification_type: "logo"
+    logo_file: "SunNxt.png"
+    content_name_fallback: "Default Content"
+    drm: true
+    resume_region: [750, 240, 300, 100]
+
+  - id: 2
+    app_name: "Fancode"
+    navigation:
+      down_presses: 2
+      right_presses: 12
+    verification_type: "ocr"
+    expected_ocr_text: "FANCODE"
+    content_name_fallback: "Default Content"
+    drm: false
+    resume_region: [750, 240, 300, 100]
+
+  - id: 3
+    app_name: "Stage"
+    navigation:
+      down_presses: 2
+      right_presses: 1
+    verification_type: "ocr"
+    expected_ocr_text: "Stage"
+    content_name_fallback: "Default Content"
+    drm: false
+    resume_region: [750, 240, 300, 100]
+
+  - id: 4
+    app_name: "Klikk"
+    navigation:
+      down_presses: 2
+      right_presses: 1
+    verification_type: "ocr"
+    expected_ocr_text: "Klikk"
+    content_name_fallback: "Default Content"
+    drm: false
+    resume_region: [762, 217, 299, 152]
+
+  - id: 5
+    app_name: "Shemaroo"
+    navigation:
+      down_presses: 2
+      right_presses: 3
+    verification_type: "logo"
+    logo_file: "shemaroo.png"
+    content_name_fallback: "Default Content"
+    drm: false
+    resume_region: [750, 240, 300, 100]
+
+  - id: 6
+    app_name: "Docubay"
+    navigation:
+      down_presses: 2
+      right_presses: 2
+    verification_type: "ocr"
+    expected_ocr_text: "Docubay"
+    content_name_fallback: "Default Content"
+    drm: false
+    resume_region: [750, 240, 300, 100]
+
+  - id: 7
+    app_name: "Hallmark+"
+    navigation:
+      down_presses: 2
+      right_presses: 2
+    verification_type: "logo"
+    logo_file: "Hallmark.png"
+    content_name_fallback: "Default Content"
+    drm: false
+    resume_region: [750, 240, 300, 100]
+
+  - id: 8
+    app_name: "Fuse"
+    navigation:
+      down_presses: 2
+      right_presses: 3
+    verification_type: "logo"
+    logo_file: "fuse.png"
+    content_name_fallback: "Default Content"
+    drm: false
+    resume_region: [762, 217, 299, 152]
+
+  - id: 9
+    app_name: "EpicOn"
+    navigation:
+      down_presses: 2
+      right_presses: 1
+    verification_type: "logo"
+    logo_file: "Epic.png"
+    content_name_fallback: "Default Content"
+    drm: false
+    resume_region: [762, 217, 299, 152]
+
+  - id: 10
+    app_name: "Playflix"
+    navigation:
+      down_presses: 2
+      right_presses: 1
+    verification_type: "ocr"
+    expected_ocr_text: "Playflix"
+    content_name_fallback: "Default Content"
+    drm: false
+    resume_region: [762, 217, 299, 152]
+
+  - id: 11
+    app_name: "Curiosity"
+    navigation:
+      down_presses: 2
+      right_presses: 3
+    verification_type: "logo"
+    logo_file: "curiosity.png"
+    content_name_fallback: "Default Content"
+    drm: false
+    resume_region: [762, 217, 299, 152]
+
+  - id: 12
+    app_name: "NammaFlix"
+    navigation:
+      down_presses: 2
+      right_presses: 1
+    verification_type: "ocr"
+    expected_ocr_text: "NammaFlix"
+    content_name_fallback: "Default Content"
+    drm: false
+    resume_region: [762, 217, 299, 152]
+
+  - id: 13
+    app_name: "TarangPlus"
+    navigation:
+      down_presses: 2
+      right_presses: 1
+    verification_type: "logo"
+    logo_file: "Tarang.png"
+    content_name_fallback: "Default Content"
+    drm: false
+    resume_region: [750, 240, 300, 100]
+
+  # # DRM Apps
+
+  # - id: 14
+  #   app_name: "Amazon Prime Video"
+  #   navigation:
+  #     down_presses: 3
+  #     right_presses: 2
+  #   verification_type: "ocr"
+  #   expected_ocr_text: "Prime Video"
+  #   content_name_fallback: "Prime Video Content"
+  #   drm: true
+  #   login_required: true
+  #   content_selection:
+  #     additional_navigation:
+  #       down_presses: 2
+  #       right_presses: 1
+  #     play_button_wait: 5
+
+  # - id: 15
+  #   app_name: "Disney+ Hotstar"
+  #   navigation:
+  #     down_presses: 3
+  #     right_presses: 3
+  #   verification_type: "ocr"
+  #   expected_ocr_text: "Disney+"
+  #   content_name_fallback: "Hotstar Content"
+  #   drm: true
+  #   login_required: true
+  #   content_selection:
+  #     additional_navigation:
+  #       down_presses: 4
+  #       right_presses: 1
+  #     play_button_wait: 4
+
+  # - id: 16
+  #   app_name: "Sony LIV"
+  #   navigation:
+  #     down_presses: 3
+  #     right_presses: 4
+  #   verification_type: "ocr"
+  #   expected_ocr_text: "SonyLIV"
+  #   content_name_fallback: "Sony LIV Content"
+  #   drm: true
+  #   login_required: true
+  #   content_selection:
+  #     additional_navigation:
+  #       down_presses: 2
+  #       right_presses: 3
+  #     play_button_wait: 3
+
+  # - id: 17
+  #   app_name: "JioCinema"
+  #   navigation:
+  #     down_presses: 3
+  #     right_presses: 5
+  #   verification_type: "ocr"
+  #   expected_ocr_text: "JioCinema"
+  #   content_name_fallback: "JioCinema Content"
+  #   drm: true
+  #   login_required: true
+  #   content_selection:
+  #     additional_navigation:
+  #       down_presses: 3
+  #       right_presses: 2
+  #     play_button_wait: 4
+
+  # - id: 18
+  #   app_name: "Zee5"
+  #   navigation:
+  #     down_presses: 3
+  #     right_presses: 6
+  #   verification_type: "ocr"
+  #   expected_ocr_text: "ZEE5"
+  #   content_name_fallback: "Zee5 Content"
+  #   drm: true
+  #   login_required: true
+  #   content_selection:
+  #     additional_navigation:
+  #       down_presses: 2
+  #       right_presses: 2
+  #     play_button_wait: 5

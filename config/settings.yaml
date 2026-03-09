@@ -1,0 +1,20 @@
+base_results_dir: "./TestResults"
+check_interval: 5
+black_percentage: 90
+max_consecutive_black: 2
+playback_duration: 30
+tesseract_path: "C:\\Program Files\\Tesseract-OCR\\tesseract.exe"  # Windows
+# tesseract_path: "/usr/bin/tesseract"  # Linux
+
+# Email Configuration (Gmail SMTP)
+email:
+  enabled: true
+  smtp_server: "smtp.gmail.com"
+  smtp_port: 587
+  sender_email: "testlabreport6@gmail.com"
+  sender_password: "bgwzrtkmcgnwdwtp"  # Gmail App Password
+  sender_name: "OTT Test Automation"
+  recipient_emails:
+    - "sharma.aman1511@gmail.com"
+    - "janhavi.srivastava710@gmail.com"
+  subject_prefix: "Automated OTT Playback Check"

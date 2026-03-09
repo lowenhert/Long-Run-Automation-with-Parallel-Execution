@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*/__pycache__/
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+dist/
+build/
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Pytest / test artefacts
+.pytest_cache/
+*.log
+*.pyc
+
+# Generated HTML reports (root-level)
+*.html
+
+# Test execution results & screenshots
+TestResults/
+screenshots/
+
+# IDE / OS
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
