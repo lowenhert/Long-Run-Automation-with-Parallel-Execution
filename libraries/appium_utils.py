@@ -32,7 +32,7 @@ import time
 from typing import List, Optional
 
 from appium import webdriver
-from appium.options import AppiumOptions
+from appium.options.common.base import AppiumOptions
 from appium.webdriver.common.appiumby import AppiumBy
 from selenium.common.exceptions import (
     NoSuchElementException,

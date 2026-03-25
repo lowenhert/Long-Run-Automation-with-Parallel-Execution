@@ -1,173 +1,173 @@
-import json
 from pathlib import Path
 from datetime import datetime
-import traceback
-import logging
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
+from openpyxl.drawing.image import Image as XlImage
+
 
 class ReportGenerator:
     def __init__(self, execution_dir: Path):
         self.execution_dir = execution_dir
-        # Generate Excel filename with current date in DD-MM-YYYY format
         current_date = datetime.now().strftime("%d-%m-%Y")
         excel_filename = f"OTT_Playback_{current_date}.xlsx"
         self.excel_path = execution_dir / excel_filename
-        self.detailed_log_path = execution_dir / "detailed_failures.json"
-        self.failed_scenarios_log = execution_dir / "failed_scenarios.log"
-        self._init_excel()
-        self._init_failure_logs()
+        self._ensure_workbook()
 
-    def _init_excel(self):
+    def _ensure_workbook(self):
+        """Create the Excel workbook if it doesn't exist yet."""
         if not self.excel_path.exists():
             wb = Workbook()
             ws = wb.active
-            ws.title = "OTT Playback Results"
-            
-            # Define headers
-            self.headers = [
-                "Ott_App_Name", "Content_Name", "Playback_Time_Seconds",
-                "Timestamp", "Device_ID", "Status", "Screenshots_Folder",
-                "Error_Type", "Error_Message", "Failed_Step"
-            ]
-            
-            # Dark blue header style
-            header_fill = PatternFill(start_color="00008B", end_color="00008B", fill_type="solid")
-            header_font = Font(color="FFFFFF", bold=True)
-            thin_border = Border(
-                left=Side(style='thin'),
-                right=Side(style='thin'),
-                top=Side(style='thin'),
-                bottom=Side(style='thin')
-            )
-            
-            # Write headers with styling
-            for col, header in enumerate(self.headers, 1):
-                cell = ws.cell(row=1, column=col, value=header)
-                cell.fill = header_fill
-                cell.font = header_font
-                cell.alignment = Alignment(horizontal="center")
-                cell.border = thin_border
-            
-            # Initial column widths based on header
-            for col, header in enumerate(self.headers, 1):
-                ws.column_dimensions[get_column_letter(col)].width = max(len(header) + 2, 15)
-            
+            ws.title = "Summary"
+            ws.cell(row=1, column=1, value="Module-wise test reports — see individual sheets")
             wb.save(self.excel_path)
-        else:
-            self.headers = [
-                "Ott_App_Name", "Content_Name", "Playback_Time_Seconds",
-                "Timestamp", "Device_ID", "Status", "Screenshots_Folder",
-                "Error_Type", "Error_Message", "Failed_Step"
-            ]
-    
-    def _init_failure_logs(self):
-        """Initialize detailed failure logging files"""
-        if not self.detailed_log_path.exists():
-            with open(self.detailed_log_path, "w") as f:
-                json.dump({"failed_scenarios": []}, f, indent=2)
-        
-        if not self.failed_scenarios_log.exists():
-            with open(self.failed_scenarios_log, "w") as f:
-                f.write(f"Failed Scenarios Log - Started at {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
-                f.write("=" * 80 + "\n\n")
 
-    def add_result(self, app_name, content_name, playback_time, device_id, status, screenshots_folder, 
-                   error_type="", error_message="", failed_step="", full_traceback=""):
-        """Add test result with enhanced failure details"""
+    def add_module_report(self, module_name, device_id, overall_status, steps,
+                          summary_info=None):
+        """
+        Create / append a dedicated sheet for a test module with one row per
+        step, an embedded screenshot thumbnail in each row, and a description
+        of what was done.
+
+        Parameters
+        ----------
+        module_name : str
+            Sheet name (e.g. "Parental Lock Setup").  Truncated to 31 chars.
+        device_id : str
+            Device under test.
+        overall_status : str
+            "PASSED" or "FAILED".
+        steps : list[dict]
+            Each dict must have:
+                step_number   : int
+                step_name     : str   (short label, e.g. "Verify Home Screen")
+                description   : str   (what happened in this step)
+                status        : str   ("PASSED" / "FAILED" / "SKIPPED")
+                screenshot    : str | Path | None  (path to PNG file)
+                error_message : str   (empty string if no error)
+        summary_info : dict | None
+            Optional key-value pairs added at the top of the sheet.
+        """
         wb = load_workbook(self.excel_path)
-        ws = wb.active
-        
-        # Find next empty row
-        next_row = ws.max_row + 1
-        
-        # Add data row
-        row_data = [
-            app_name, content_name, playback_time,
-            datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            device_id, status, screenshots_folder,
-            error_type, error_message, failed_step
-        ]
-        
-        # Border style for data cells
-        thin_border = Border(
-            left=Side(style='thin'),
-            right=Side(style='thin'),
-            top=Side(style='thin'),
-            bottom=Side(style='thin')
-        )
-        
-        for col, value in enumerate(row_data, 1):
-            cell = ws.cell(row=next_row, column=col, value=value)
-            cell.border = thin_border
-        
-        # Auto-adjust column widths based on content
-        for col in range(1, len(row_data) + 1):
-            col_letter = get_column_letter(col)
-            max_length = len(str(self.headers[col - 1])) + 2
-            for row in range(1, next_row + 1):
-                cell_value = ws.cell(row=row, column=col).value
-                if cell_value:
-                    max_length = max(max_length, len(str(cell_value)) + 2)
-            ws.column_dimensions[col_letter].width = min(max_length, 50)  # Cap at 50
-        
-        wb.save(self.excel_path)
-        
-        # If failed, log detailed information
-        if status == "FAILED":
-            self._log_failure_details(app_name, content_name, device_id, error_type, 
-                                    error_message, failed_step, full_traceback)
-    
-    def _log_failure_details(self, app_name, content_name, device_id, error_type, 
-                           error_message, failed_step, full_traceback):
-        """Log detailed failure information for analysis"""
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        
-        # Add to JSON log for structured data
-        try:
-            with open(self.detailed_log_path, "r") as f:
-                data = json.load(f)
-            
-            failure_entry = {
-                "timestamp": timestamp,
-                "app_name": app_name,
-                "content_name": content_name,
-                "device_id": device_id,
-                "error_type": error_type,
-                "error_message": error_message,
-                "failed_step": failed_step,
-                "full_traceback": full_traceback
-            }
-            
-            data["failed_scenarios"].append(failure_entry)
-            
-            with open(self.detailed_log_path, "w") as f:
-                json.dump(data, f, indent=2)
-        
-        except Exception as e:
-            print(f"Warning: Could not update JSON failure log: {e}")
-        
-        # Add to text log for easy reading
-        try:
-            with open(self.failed_scenarios_log, "a") as f:
-                f.write(f"FAILURE DETECTED - {timestamp}\n")
-                f.write(f"App: {app_name} | Content: {content_name} | Device: {device_id}\n")
-                f.write(f"Error Type: {error_type}\n")
-                f.write(f"Failed Step: {failed_step}\n")
-                f.write(f"Error Message: {error_message}\n")
-                if full_traceback:
-                    f.write(f"Full Traceback:\n{full_traceback}\n")
-                f.write("-" * 80 + "\n\n")
-        
-        except Exception as e:
-            print(f"Warning: Could not update text failure log: {e}")
 
-    def get_failure_summary(self):
-        """Get summary of all failures for reporting"""
-        try:
-            with open(self.detailed_log_path, "r") as f:
-                data = json.load(f)
-            return data.get("failed_scenarios", [])
-        except Exception:
-            return []
+        # Sheet name: max 31 chars, no duplicates
+        sheet_title = module_name[:31]
+        if sheet_title in wb.sheetnames:
+            del wb[sheet_title]
+        ws = wb.create_sheet(title=sheet_title)
+
+        # ── Styles ────────────────────────────────────────────────
+        header_fill = PatternFill(start_color="00008B", end_color="00008B",
+                                  fill_type="solid")
+        header_font = Font(color="FFFFFF", bold=True, size=11)
+        pass_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE",
+                                fill_type="solid")
+        fail_fill = PatternFill(start_color="FFC7CE", end_color="FFC7CE",
+                                fill_type="solid")
+        skip_fill = PatternFill(start_color="FFEB9C", end_color="FFEB9C",
+                                fill_type="solid")
+        thin_border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin'),
+        )
+        wrap_align = Alignment(horizontal="left", vertical="top",
+                               wrap_text=True)
+        center_align = Alignment(horizontal="center", vertical="center")
+
+        # ── Summary block (rows 1-N) ─────────────────────────────
+        row = 1
+        summary_data = {
+            "Module": module_name,
+            "Device": device_id,
+            "Status": overall_status,
+            "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        }
+        if summary_info:
+            summary_data.update(summary_info)
+
+        for key, val in summary_data.items():
+            ws.cell(row=row, column=1, value=key).font = Font(bold=True)
+            ws.cell(row=row, column=1).border = thin_border
+            status_cell = ws.cell(row=row, column=2, value=str(val))
+            status_cell.border = thin_border
+            if key == "Status":
+                status_cell.fill = pass_fill if val == "PASSED" else fail_fill
+                status_cell.font = Font(bold=True)
+            row += 1
+
+        row += 1  # blank row
+
+        # ── Header row ────────────────────────────────────────────
+        headers = ["Step #", "Step Name", "Description", "Status",
+                    "Screenshot", "Error"]
+        col_widths = [8, 28, 55, 12, 32, 40]
+        for col_idx, (hdr, w) in enumerate(zip(headers, col_widths), 1):
+            cell = ws.cell(row=row, column=col_idx, value=hdr)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = center_align
+            cell.border = thin_border
+            ws.column_dimensions[get_column_letter(col_idx)].width = w
+        row += 1
+
+        # ── Step rows with embedded screenshots ───────────────────
+        IMG_HEIGHT_PX = 120          # thumbnail height in the cell
+        ROW_HEIGHT_PT = 95           # Excel row height in points
+
+        for step in steps:
+            ws.row_dimensions[row].height = ROW_HEIGHT_PT
+
+            # Step #
+            c = ws.cell(row=row, column=1, value=step.get("step_number", ""))
+            c.alignment = center_align
+            c.border = thin_border
+
+            # Step Name
+            c = ws.cell(row=row, column=2, value=step.get("step_name", ""))
+            c.alignment = wrap_align
+            c.border = thin_border
+
+            # Description
+            c = ws.cell(row=row, column=3, value=step.get("description", ""))
+            c.alignment = wrap_align
+            c.border = thin_border
+
+            # Status
+            st = step.get("status", "")
+            c = ws.cell(row=row, column=4, value=st)
+            c.alignment = center_align
+            c.border = thin_border
+            if st == "PASSED":
+                c.fill = pass_fill
+            elif st == "FAILED":
+                c.fill = fail_fill
+            elif st == "SKIPPED":
+                c.fill = skip_fill
+
+            # Screenshot — embed as image if file exists
+            ss_path = step.get("screenshot")
+            if ss_path and Path(ss_path).exists():
+                try:
+                    img = XlImage(str(ss_path))
+                    # Scale to thumbnail keeping aspect ratio
+                    ratio = IMG_HEIGHT_PX / img.height if img.height else 1
+                    img.width = int(img.width * ratio)
+                    img.height = IMG_HEIGHT_PX
+                    anchor = f"{get_column_letter(5)}{row}"
+                    ws.add_image(img, anchor)
+                except Exception as img_exc:
+                    ws.cell(row=row, column=5, value=f"(img error: {img_exc})")
+            else:
+                ws.cell(row=row, column=5, value="—")
+            ws.cell(row=row, column=5).border = thin_border
+
+            # Error
+            c = ws.cell(row=row, column=6,
+                        value=step.get("error_message", ""))
+            c.alignment = wrap_align
+            c.border = thin_border
+
+            row += 1
+
+        wb.save(self.excel_path)

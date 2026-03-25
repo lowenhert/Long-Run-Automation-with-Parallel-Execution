@@ -1,10 +1,31 @@
 base_results_dir: "./TestResults"
-check_interval: 5
-black_percentage: 90
-max_consecutive_black: 2
-playback_duration: 30
-tesseract_path: "C:\\Program Files\\Tesseract-OCR\\tesseract.exe"  # Windows
-# tesseract_path: "/usr/bin/tesseract"  # Linux
+
+# Parental Lock Configuration
+parental_lock:
+  app_package: "tv.accedo.studio.paytv.tatasky"
+  pin: "0000"                          # 4-digit parental PIN
+  appium_url: "http://localhost:4723"
+  navigation:
+    up_presses: 1                      # presses UP from home to reach settings row
+    right_presses: 4                   # presses RIGHT to reach User Preferences
+  home_check:
+    logo_file: "Home.png"
+    region: [90, 120, 260, 180]        # x, y, width, height
+    threshold: 0.60
+    max_attempts: 4
+  ui_ids:
+    title: "textViewTitle"
+    parental_controls_btn: "buttonParentalControls"
+    pin_title: "page_title"
+    channel_lock_menu_item: "menu_item"
+    channel_row: "android:id/content"
+    checkbox: "cb"
+    channel_name: "channelName"
+    channel_number: "channelNumber"
+  max_down_search: 15                  # max DOWN presses to find Parental Controls
+  max_right_search: 10                 # max RIGHT presses to find Channel Lock tab
+  max_no_new_scrolls: 3               # stop scrolling after N scrolls with no new channels
+  max_scroll_iterations: 30            # absolute cap on total scroll iterations
 
 # Email Configuration (Gmail SMTP)
 email:
