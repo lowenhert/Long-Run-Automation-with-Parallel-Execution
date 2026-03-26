@@ -105,7 +105,7 @@ class InteractiveTestRunner:
         if not exec_dir or not self.email_sender or not self.email_sender.enabled:
             return
         try:
-            excel_files = list(exec_dir.rglob("OTT_Playback_*.xlsx"))
+            excel_files = list(exec_dir.rglob("Long Run Automation report.xlsx"))
             if not excel_files:
                 print(f"⚠️  No Excel report found in {exec_dir}")
                 return
@@ -438,7 +438,7 @@ class InteractiveTestRunner:
             print("❌ No execution results available. Run tests first.")
             return
 
-        excel_files = list(self.last_execution_dir.rglob("OTT_Playback_*.xlsx"))
+        excel_files = list(self.last_execution_dir.rglob("Long Run Automation report.xlsx"))
         if not excel_files:
             print(f"❌ No Excel report found in {self.last_execution_dir}")
             return

@@ -38,6 +38,7 @@ MAX_DOWN_SEARCH = PL_CFG.get("max_down_search", 15)
 MAX_RIGHT_SEARCH = PL_CFG.get("max_right_search", 10)
 MAX_NO_NEW_SCROLLS = PL_CFG.get("max_no_new_scrolls", 3)
 MAX_SCROLL_ITERATIONS = PL_CFG.get("max_scroll_iterations", 30)
+CHANNELS_TO_LOCK = PL_CFG.get("channels_to_lock", 0)  # 0 = lock ALL
 
 
 class TestParentalLockSetup:
@@ -97,6 +98,23 @@ class TestParentalLockSetup:
         except Exception as e:
             log.error(f"CLEANUP quit() failed: {e}")
         log.info("CLEANUP complete")
+
+    def _save_locked_channels_to_report(self, channels):
+        """Add locked channels as a sheet in the main report Excel."""
+        try:
+            self.report_gen.add_locked_channels_sheet(channels)
+            log.info(f"[EXCEL] Locked channels sheet added to report ({len(channels)} channels)")
+
+            # Log the locked channels list
+            log.info(f"[LOCKED CHANNELS LIST] Total: {len(channels)}")
+            for ch in channels:
+                log.info(
+                    f"  Ch {ch.get('channel_number', '?')} — "
+                    f"{ch.get('channel_name', '')} — "
+                    f"{'Locked' if ch.get('locked') else 'Unlocked'}"
+                )
+        except Exception as e:
+            log.warning(f"[EXCEL] Failed to save locked channels: {e}")
 
     def _take_step_screenshot(self, step_number, label=""):
         """Take a screenshot for the given step and return the saved path."""
@@ -378,11 +396,25 @@ class TestParentalLockSetup:
             scroll_iter = 0
             newly_locked = 0
             already_locked = 0
+            lock_limit = CHANNELS_TO_LOCK  # 0 = lock ALL
+            last_processed_name = None     # tracks which channel was last handled
+
+            # ── Scroll-and-lock approach ──────────────────────────
+            # D-pad focus starts on the first channel row (Step 8).
+            # Each batch: read visible channels, find where we left
+            # off, process only the NEW channels (with SELECT+DOWN
+            # for each). Skip duplicates WITHOUT pressing DOWN since
+            # the focus is already past them.
 
             while no_new_count < max_no_new and scroll_iter < MAX_SCROLL_ITERATIONS:
-                scroll_iter += 1
-                log.info(f"[STEP 9] Scroll iteration {scroll_iter}/{MAX_SCROLL_ITERATIONS}")
+                if lock_limit > 0 and newly_locked >= lock_limit:
+                    log.info(f"[STEP 9] Reached lock limit ({lock_limit}), stopping.")
+                    break
 
+                scroll_iter += 1
+                log.info(f"[STEP 9] Scroll batch {scroll_iter}/{MAX_SCROLL_ITERATIONS}")
+
+                # Read all currently visible channels
                 name_elements = self.ui.find_all_by_id(channel_name_id, timeout=5)
                 if not name_elements:
                     log.warning("[STEP 9] No channel names found on screen")
@@ -391,80 +423,99 @@ class TestParentalLockSetup:
                 cb_elements = self.ui.find_all_by_id(checkbox_id, timeout=2)
                 num_elements = self.ui.find_all_by_id(channel_number_id, timeout=2)
 
-                found_new = False
-                for idx, name_el in enumerate(name_elements):
-                    try:
-                        ch_name = name_el.text.strip()
-                        if not ch_name or ch_name in seen_channels:
+                # Determine where to start processing in this batch.
+                # Skip elements that were already processed (above the
+                # current focus) — do NOT press DOWN for these.
+                start_idx = 0
+                if last_processed_name:
+                    for i, el in enumerate(name_elements):
+                        try:
+                            if el.text.strip() == last_processed_name:
+                                start_idx = i + 1
+                                break
+                        except Exception:
                             continue
 
-                        seen_channels.add(ch_name)
-                        found_new = True
+                found_new_in_batch = False
 
-                        ch_number = "?"
-                        if idx < len(num_elements):
-                            try:
-                                ch_number = num_elements[idx].text.strip()
-                            except Exception:
-                                pass
+                for idx in range(start_idx, len(name_elements)):
+                    if lock_limit > 0 and newly_locked >= lock_limit:
+                        break
 
-                        is_checked = False
-                        cb_el = None
-                        if idx < len(cb_elements):
-                            try:
-                                cb_el = cb_elements[idx]
-                                is_checked = cb_el.get_attribute("checked") == "true"
-                            except Exception:
-                                pass
+                    try:
+                        ch_name = name_elements[idx].text.strip()
+                    except Exception:
+                        ch_name = ""
 
-                        if is_checked:
-                            already_locked += 1
-                            log.info(
-                                f"[STEP 9] Ch {ch_number} — {ch_name} — "
-                                f"ALREADY LOCKED ✓ (skipped)"
-                            )
-                        else:
-                            if cb_el is not None:
-                                try:
-                                    cb_el.click()
-                                    newly_locked += 1
-                                    log.info(
-                                        f"[STEP 9] Ch {ch_number} — {ch_name} — "
-                                        f"LOCKED NOW 🔒"
-                                    )
-                                    time.sleep(0.3)
-                                except Exception as click_exc:
-                                    log.warning(
-                                        f"[STEP 9] Ch {ch_number} — {ch_name} — "
-                                        f"FAILED to lock: {click_exc}"
-                                    )
-                            else:
-                                log.warning(
-                                    f"[STEP 9] Ch {ch_number} — {ch_name} — "
-                                    f"No checkbox found"
-                                )
-
-                        locked_channels.append({
-                            "channel_number": ch_number,
-                            "channel_name": ch_name,
-                            "locked": is_checked or (cb_el is not None and not is_checked),
-                        })
-
-                    except Exception as row_exc:
-                        log.debug(f"[STEP 9] Skipping element: {row_exc}")
+                    if not ch_name or ch_name in seen_channels:
+                        # Already processed in a previous batch — skip
+                        # WITHOUT pressing DOWN (focus is already past it)
                         continue
 
-                if found_new:
+                    seen_channels.add(ch_name)
+                    found_new_in_batch = True
+
+                    ch_number = "?"
+                    if idx < len(num_elements):
+                        try:
+                            ch_number = num_elements[idx].text.strip()
+                        except Exception:
+                            pass
+
+                    is_checked = False
+                    if idx < len(cb_elements):
+                        try:
+                            is_checked = cb_elements[idx].get_attribute("checked") == "true"
+                        except Exception:
+                            pass
+
+                    if is_checked:
+                        already_locked += 1
+                        log.info(
+                            f"[STEP 9] Ch {ch_number} — {ch_name} — "
+                            f"ALREADY LOCKED ✓ (skipped)"
+                        )
+                    else:
+                        # Press SELECT to toggle lock on the currently focused row
+                        try:
+                            self.device.select()
+                            newly_locked += 1
+                            log.info(
+                                f"[STEP 9] Ch {ch_number} — {ch_name} — "
+                                f"LOCKED NOW 🔒 (via SELECT)"
+                            )
+                            time.sleep(0.3)
+                        except Exception as click_exc:
+                            log.warning(
+                                f"[STEP 9] Ch {ch_number} — {ch_name} — "
+                                f"FAILED to lock: {click_exc}"
+                            )
+
+                    locked_channels.append({
+                        "channel_number": ch_number,
+                        "channel_name": ch_name,
+                        "locked": True,
+                    })
+
+                    last_processed_name = ch_name
+
+                    # Press DOWN to move focus to the next channel
+                    self.device.navigate_down(1)
+                    time.sleep(0.3)
+
+                if found_new_in_batch:
                     no_new_count = 0
                 else:
                     no_new_count += 1
 
-                self.device.navigate_down(3)
-                time.sleep(1)
+                # Small wait for scroll/render before re-reading
+                time.sleep(0.5)
 
             if scroll_iter >= MAX_SCROLL_ITERATIONS:
                 log.warning(f"[STEP 9] Reached max scroll limit ({MAX_SCROLL_ITERATIONS})")
 
+            lock_target_str = str(lock_limit) if lock_limit > 0 else "ALL"
+            log.info(f"[STEP 9] Lock target             : {lock_target_str}")
             log.info(f"[STEP 9] Total channels scanned : {len(seen_channels)}")
             log.info(f"[STEP 9] Newly locked           : {newly_locked}")
             log.info(f"[STEP 9] Already locked (skipped): {already_locked}")
@@ -473,8 +524,12 @@ class TestParentalLockSetup:
             _record_step(9, "Lock Channels",
                          f"Scanned {len(seen_channels)} channels | "
                          f"Newly locked: {newly_locked} | "
-                         f"Already locked: {already_locked}",
+                         f"Already locked: {already_locked} | "
+                         f"Lock target: {lock_target_str}",
                          "PASSED", ss9)
+
+            # ── Save locked channels to report ─────────────────────────
+            self._save_locked_channels_to_report(locked_channels)
 
             # ─────────────────────────────────────────────────────────
             # STEP 10 — Press HOME

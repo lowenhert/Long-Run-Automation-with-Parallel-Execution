@@ -9,9 +9,7 @@ from openpyxl.drawing.image import Image as XlImage
 class ReportGenerator:
     def __init__(self, execution_dir: Path):
         self.execution_dir = execution_dir
-        current_date = datetime.now().strftime("%d-%m-%Y")
-        excel_filename = f"OTT_Playback_{current_date}.xlsx"
-        self.excel_path = execution_dir / excel_filename
+        self.excel_path = execution_dir / "Long Run Automation report.xlsx"
         self._ensure_workbook()
 
     def _ensure_workbook(self):
@@ -169,5 +167,57 @@ class ReportGenerator:
             c.border = thin_border
 
             row += 1
+
+        wb.save(self.excel_path)
+
+    def add_locked_channels_sheet(self, channels):
+        """
+        Add a 'Locked Channels' sheet to the report workbook.
+
+        Parameters
+        ----------
+        channels : list[dict]
+            Each dict: {"channel_number": str, "channel_name": str, "locked": bool}
+        """
+        wb = load_workbook(self.excel_path)
+
+        sheet_title = "Locked Channels"
+        if sheet_title in wb.sheetnames:
+            del wb[sheet_title]
+        ws = wb.create_sheet(title=sheet_title)
+
+        header_fill = PatternFill(start_color="00008B", end_color="00008B",
+                                  fill_type="solid")
+        header_font = Font(color="FFFFFF", bold=True, size=11)
+        thin_border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin'),
+        )
+        center_align = Alignment(horizontal="center", vertical="center")
+        pass_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE",
+                                fill_type="solid")
+
+        headers = ["S.No", "Channel Number", "Channel Name", "Lock Status"]
+        col_widths = [8, 18, 40, 14]
+        for col_idx, (hdr, w) in enumerate(zip(headers, col_widths), 1):
+            cell = ws.cell(row=1, column=col_idx, value=hdr)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = center_align
+            cell.border = thin_border
+            ws.column_dimensions[get_column_letter(col_idx)].width = w
+
+        for i, ch in enumerate(channels, start=1):
+            row = i + 1
+            ws.cell(row=row, column=1, value=i).alignment = center_align
+            ws.cell(row=row, column=1).border = thin_border
+            ws.cell(row=row, column=2, value=ch.get("channel_number", "?")).border = thin_border
+            ws.cell(row=row, column=3, value=ch.get("channel_name", "")).border = thin_border
+            status_cell = ws.cell(row=row, column=4,
+                                  value="Locked" if ch.get("locked") else "Unlocked")
+            status_cell.alignment = center_align
+            status_cell.border = thin_border
+            if ch.get("locked"):
+                status_cell.fill = pass_fill
 
         wb.save(self.excel_path)
