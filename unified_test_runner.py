@@ -95,7 +95,9 @@ class InteractiveTestRunner:
             if not self.devices:
                 print("⚠️  No devices available for scheduled test")
                 return None
-            return self._run_parental_lock_test(self.devices)
+            exec_dir = self._run_parental_lock_test(self.devices)
+            self._run_favourite_channels_test(self.devices, exec_dir)
+            return exec_dir
         except Exception as e:
             print(f"❌ Error in scheduled test execution: {e}")
             return None
@@ -135,6 +137,7 @@ class InteractiveTestRunner:
         required_files = [
             "config/settings.yaml",
             "test/test_parental_lock_setup.py",
+            "test/test_favourite_channels_setup.py",
         ]
         for fp in required_files:
             if Path(fp).exists():
@@ -262,6 +265,60 @@ class InteractiveTestRunner:
         print("\n🎉 Parental Lock test completed!")
         return self.last_execution_dir
 
+    def _run_favourite_channels_test(self, selected_devices, existing_exec_dir=None):
+        """Run the Favourite Channels Setup test on selected devices."""
+        if existing_exec_dir:
+            exec_id = existing_exec_dir.name
+        else:
+            exec_id = datetime.now().strftime("Execution_%Y%m%d_%H%M%S")
+        test_file = "test/test_favourite_channels_setup.py"
+
+        print(f"\n⭐ Running Favourite Channels Setup test")
+        print(f"🆔 Execution ID: {exec_id}")
+
+        for device_id in selected_devices:
+            device_safe = device_id.replace(':', '_').replace('.', '_')
+            exec_dir = Path("TestResults") / exec_id / f"device_{device_safe}"
+            exec_dir.mkdir(parents=True, exist_ok=True)
+
+            env = os.environ.copy()
+            env["DEVICE_ID"] = device_id
+            env["DEVICE_NAME"] = device_id
+            env["TARGET_DEVICE"] = device_id
+            env["EXECUTION_ID"] = exec_id
+
+            cmd = [
+                self.python_exe, "-m", "pytest",
+                test_file,
+                "-v", "--tb=short", "--capture=no",
+                "--log-cli-level=DEBUG",
+                "--log-cli-format=%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+                "--log-file-level=DEBUG",
+                f"--log-file={exec_dir}/test_favourite_channels.log",
+                f"--html={exec_dir}/report_favourite_channels.html",
+                "--self-contained-html",
+            ]
+            print(f"  [{device_id}] Running favourite channels test…")
+            try:
+                result = subprocess.run(
+                    cmd, env=env, capture_output=True, text=True, timeout=30000
+                )
+                symbol = "✅" if result.returncode == 0 else "❌"
+                print(
+                    f"  [{device_id}] {symbol} Favourite Channels "
+                    f"{'PASSED' if result.returncode == 0 else 'FAILED'}"
+                )
+                if result.returncode != 0 and result.stderr:
+                    print(f"  [{device_id}]   stderr: {result.stderr[:300]}")
+            except subprocess.TimeoutExpired:
+                print(f"  [{device_id}] ⏰ Favourite Channels TIMED OUT")
+            except Exception as e:
+                print(f"  [{device_id}] ❌ Favourite Channels ERROR: {e}")
+
+        self.last_execution_dir = Path("TestResults") / exec_id
+        print("\n🎉 Favourite Channels test completed!")
+        return self.last_execution_dir
+
     # ──────────────────────────────────────────────────────────────
     # Main Menu
     # ──────────────────────────────────────────────────────────────
@@ -275,15 +332,18 @@ class InteractiveTestRunner:
         while True:
             print("\nAvailable Test Modules:")
             print("  • Parental Lock Setup (Channel Lock)")
+            print("  • Favourite Channels Setup")
             print("\nSelect an option:")
             print("1. 🔌 Test Device Connectivity")
             print("2. 🔒 Run Parental Lock Setup Test")
-            print("3. 📅 Schedule Tests")
-            print("4. 📧 Email Report (Last Execution)")
-            print("5. ❌ Exit")
+            print("3. ⭐ Run Favourite Channels Setup Test")
+            print("4. 🚀 Run All Tests")
+            print("5. 📅 Schedule Tests")
+            print("6. 📧 Email Report (Last Execution)")
+            print("7. ❌ Exit")
 
             try:
-                choice = input("\nEnter your choice (1-5): ").strip()
+                choice = input("\nEnter your choice (1-7): ").strip()
 
                 if choice == '1':
                     self.test_connectivity()
@@ -303,21 +363,48 @@ class InteractiveTestRunner:
                     input("\nPress Enter to continue...")
 
                 elif choice == '3':
-                    self.schedule_tests_menu()
+                    selected_devices = self.select_devices()
+                    self._run_favourite_channels_test(selected_devices)
+
+                    if (self.last_execution_dir and self.email_sender
+                            and self.email_sender.enabled):
+                        send_email = input(
+                            "\n📧 Send email report? (y/n): "
+                        ).strip().lower()
+                        if send_email == 'y':
+                            self.send_email_report()
                     input("\nPress Enter to continue...")
 
                 elif choice == '4':
-                    self.send_email_report()
+                    selected_devices = self.select_devices()
+                    exec_dir = self._run_parental_lock_test(selected_devices)
+                    self._run_favourite_channels_test(selected_devices, exec_dir)
+
+                    if (self.last_execution_dir and self.email_sender
+                            and self.email_sender.enabled):
+                        send_email = input(
+                            "\n📧 Send email report? (y/n): "
+                        ).strip().lower()
+                        if send_email == 'y':
+                            self.send_email_report()
                     input("\nPress Enter to continue...")
 
                 elif choice == '5':
+                    self.schedule_tests_menu()
+                    input("\nPress Enter to continue...")
+
+                elif choice == '6':
+                    self.send_email_report()
+                    input("\nPress Enter to continue...")
+
+                elif choice == '7':
                     print("👋 Goodbye!")
                     if self.scheduler:
                         self.scheduler.stop_scheduler()
                     sys.exit(0)
 
                 else:
-                    print("❌ Invalid choice. Please select 1-5.")
+                    print("❌ Invalid choice. Please select 1-7.")
 
             except KeyboardInterrupt:
                 print("\n\n👋 Goodbye!")

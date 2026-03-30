@@ -28,6 +28,30 @@ parental_lock:
   max_scroll_iterations: 30            # absolute cap on total scroll iterations
   channels_to_lock: 10                  # number of channels to lock (0 = lock ALL channels)
 
+# Favourite Channels Configuration
+favourite_channels:
+  app_package: "tv.accedo.studio.paytv.tatasky"
+  appium_url: "http://localhost:4723"
+  navigation:
+    up_presses: 1                      # presses UP from home to reach settings row
+    right_presses: 4                   # presses RIGHT to reach User Preferences
+  home_check:
+    logo_file: "Home.png"
+    region: [90, 120, 260, 180]        # x, y, width, height
+    threshold: 0.60
+    max_attempts: 4
+  ui_ids:
+    title: "textViewTitle"
+    user_settings_btn: "buttonUserSettings"
+    menu_item: "menu_item"
+    deselect_all_btn: "deselectAllButton"
+    parent_layout: "parentLayout"
+    snackbar: "snackbar_top_layout"
+    channel_name: "channelName"
+    channel_number: "channelNumber"
+  max_right_favourites: 150             # max RIGHT presses when selecting channels
+  channels_to_favourite: 0             # number of channels to favourite (0 = ALL until snackbar)
+
 # Email Configuration (Gmail SMTP)
 email:
   enabled: true
