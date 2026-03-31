@@ -52,6 +52,29 @@ favourite_channels:
   max_right_favourites: 150             # max RIGHT presses when selecting channels
   channels_to_favourite: 0             # number of channels to favourite (0 = ALL until snackbar)
 
+# Remote Pairing Configuration
+remote_pairing:
+  appium_url: "http://localhost:4723"
+  navigation:
+    up_presses: 1                      # presses UP from home to reach settings row
+    right_presses: 3                   # presses RIGHT to reach Android TV Settings
+  home_check:
+    logo_file: "Home.png"
+    region: [90, 120, 260, 180]        # x, y, width, height
+    threshold: 0.60
+    max_attempts: 4
+  ui_ids:
+    settings_title: "com.android.tv.settings:id/decor_title"
+    menu_item_title: "android:id/title"
+    list_id: "com.android.tv.settings:id/list"
+    summary: "android:id/summary"
+  expected_texts:
+    settings: "Settings"
+    remotes_accessories: "Remotes and accessories"
+    connected: "Connected"
+    searching: "Searching for accessories"
+  max_back_presses: 10                 # max BACK presses to return to home screen
+
 # Email Configuration (Gmail SMTP)
 email:
   enabled: true

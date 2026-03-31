@@ -97,6 +97,7 @@ class InteractiveTestRunner:
                 return None
             exec_dir = self._run_parental_lock_test(self.devices)
             self._run_favourite_channels_test(self.devices, exec_dir)
+            self._run_remote_pairing_test(self.devices, exec_dir)
             return exec_dir
         except Exception as e:
             print(f"❌ Error in scheduled test execution: {e}")
@@ -138,6 +139,7 @@ class InteractiveTestRunner:
             "config/settings.yaml",
             "test/test_parental_lock_setup.py",
             "test/test_favourite_channels_setup.py",
+            "test/test_remote_pairing.py",
         ]
         for fp in required_files:
             if Path(fp).exists():
@@ -319,6 +321,60 @@ class InteractiveTestRunner:
         print("\n🎉 Favourite Channels test completed!")
         return self.last_execution_dir
 
+    def _run_remote_pairing_test(self, selected_devices, existing_exec_dir=None):
+        """Run the Remote Pairing Check test on selected devices."""
+        if existing_exec_dir:
+            exec_id = existing_exec_dir.name
+        else:
+            exec_id = datetime.now().strftime("Execution_%Y%m%d_%H%M%S")
+        test_file = "test/test_remote_pairing.py"
+
+        print(f"\n📡 Running Remote Pairing Check test")
+        print(f"🆔 Execution ID: {exec_id}")
+
+        for device_id in selected_devices:
+            device_safe = device_id.replace(':', '_').replace('.', '_')
+            exec_dir = Path("TestResults") / exec_id / f"device_{device_safe}"
+            exec_dir.mkdir(parents=True, exist_ok=True)
+
+            env = os.environ.copy()
+            env["DEVICE_ID"] = device_id
+            env["DEVICE_NAME"] = device_id
+            env["TARGET_DEVICE"] = device_id
+            env["EXECUTION_ID"] = exec_id
+
+            cmd = [
+                self.python_exe, "-m", "pytest",
+                test_file,
+                "-v", "--tb=short", "--capture=no",
+                "--log-cli-level=DEBUG",
+                "--log-cli-format=%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+                "--log-file-level=DEBUG",
+                f"--log-file={exec_dir}/test_remote_pairing.log",
+                f"--html={exec_dir}/report_remote_pairing.html",
+                "--self-contained-html",
+            ]
+            print(f"  [{device_id}] Running remote pairing check…")
+            try:
+                result = subprocess.run(
+                    cmd, env=env, capture_output=True, text=True, timeout=30000
+                )
+                symbol = "✅" if result.returncode == 0 else "❌"
+                print(
+                    f"  [{device_id}] {symbol} Remote Pairing "
+                    f"{'PASSED' if result.returncode == 0 else 'FAILED'}"
+                )
+                if result.returncode != 0 and result.stderr:
+                    print(f"  [{device_id}]   stderr: {result.stderr[:300]}")
+            except subprocess.TimeoutExpired:
+                print(f"  [{device_id}] ⏰ Remote Pairing TIMED OUT")
+            except Exception as e:
+                print(f"  [{device_id}] ❌ Remote Pairing ERROR: {e}")
+
+        self.last_execution_dir = Path("TestResults") / exec_id
+        print("\n🎉 Remote Pairing check completed!")
+        return self.last_execution_dir
+
     # ──────────────────────────────────────────────────────────────
     # Main Menu
     # ──────────────────────────────────────────────────────────────
@@ -333,17 +389,19 @@ class InteractiveTestRunner:
             print("\nAvailable Test Modules:")
             print("  • Parental Lock Setup (Channel Lock)")
             print("  • Favourite Channels Setup")
+            print("  • Remote Pairing Check")
             print("\nSelect an option:")
             print("1. 🔌 Test Device Connectivity")
             print("2. 🔒 Run Parental Lock Setup Test")
             print("3. ⭐ Run Favourite Channels Setup Test")
-            print("4. 🚀 Run All Tests")
-            print("5. 📅 Schedule Tests")
-            print("6. 📧 Email Report (Last Execution)")
-            print("7. ❌ Exit")
+            print("4. 📡 Run Remote Pairing Check Test")
+            print("5. 🚀 Run All Tests")
+            print("6. 📅 Schedule Tests")
+            print("7. 📧 Email Report (Last Execution)")
+            print("8. ❌ Exit")
 
             try:
-                choice = input("\nEnter your choice (1-7): ").strip()
+                choice = input("\nEnter your choice (1-8): ").strip()
 
                 if choice == '1':
                     self.test_connectivity()
@@ -377,8 +435,7 @@ class InteractiveTestRunner:
 
                 elif choice == '4':
                     selected_devices = self.select_devices()
-                    exec_dir = self._run_parental_lock_test(selected_devices)
-                    self._run_favourite_channels_test(selected_devices, exec_dir)
+                    self._run_remote_pairing_test(selected_devices)
 
                     if (self.last_execution_dir and self.email_sender
                             and self.email_sender.enabled):
@@ -390,21 +447,36 @@ class InteractiveTestRunner:
                     input("\nPress Enter to continue...")
 
                 elif choice == '5':
-                    self.schedule_tests_menu()
+                    selected_devices = self.select_devices()
+                    exec_dir = self._run_parental_lock_test(selected_devices)
+                    self._run_favourite_channels_test(selected_devices, exec_dir)
+                    self._run_remote_pairing_test(selected_devices, exec_dir)
+
+                    if (self.last_execution_dir and self.email_sender
+                            and self.email_sender.enabled):
+                        send_email = input(
+                            "\n📧 Send email report? (y/n): "
+                        ).strip().lower()
+                        if send_email == 'y':
+                            self.send_email_report()
                     input("\nPress Enter to continue...")
 
                 elif choice == '6':
-                    self.send_email_report()
+                    self.schedule_tests_menu()
                     input("\nPress Enter to continue...")
 
                 elif choice == '7':
+                    self.send_email_report()
+                    input("\nPress Enter to continue...")
+
+                elif choice == '8':
                     print("👋 Goodbye!")
                     if self.scheduler:
                         self.scheduler.stop_scheduler()
                     sys.exit(0)
 
                 else:
-                    print("❌ Invalid choice. Please select 1-7.")
+                    print("❌ Invalid choice. Please select 1-8.")
 
             except KeyboardInterrupt:
                 print("\n\n👋 Goodbye!")
