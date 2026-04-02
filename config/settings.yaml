@@ -75,6 +75,29 @@ remote_pairing:
     searching: "Searching for accessories"
   max_back_presses: 10                 # max BACK presses to return to home screen
 
+
+
+#Audio Test Configuration
+Audio :
+  appium_url: "http://localhost:4723"
+  navigation:
+    up_press: 1
+    right_presses: 4
+  home_check:
+    logo_file: "Home.png"
+    region: [ 90, 120, 260, 180 ]        # x, y, width, height
+    threshold: 0.60
+    max_attempts: 4
+  navigation_audio:
+    navigate_down: 1   #navigation to Audio Tab
+    navigate_malayalam: 2        #navigation to Malayalam audio
+  ui_ids:
+    title: "textViewTitle"
+    user_settings_btn: "buttonUserSettings"
+    Apply_btn: "tv.accedo.studio.paytv.tatasky:id/applyVideoSettings"
+
+
+
 # Email Configuration (Gmail SMTP)
 email:
   enabled: true
