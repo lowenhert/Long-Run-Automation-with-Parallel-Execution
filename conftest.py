@@ -86,13 +86,19 @@ def setup_test_directories(request):
         from datetime import datetime
         execution_id = datetime.now().strftime("Execution_%Y%m%d_%H%M%S")
     
-    base_dir = Path("TestResults") / execution_id
+    # Create device-specific subdirectory to avoid parallel write conflicts
+    device_id = os.getenv('DEVICE_ID') or os.getenv('TARGET_DEVICE') or ''
+    if device_id:
+        device_safe = device_id.replace(':', '_').replace('.', '_')
+        base_dir = Path("TestResults") / execution_id / f"device_{device_safe}"
+    else:
+        base_dir = Path("TestResults") / execution_id
     base_dir.mkdir(parents=True, exist_ok=True)
     
     # Add attributes to the test node
     request.node.execution_dir = base_dir
     request.node.screenshot_dir = base_dir / "screenshots"
-    request.node.screenshot_dir.mkdir(exist_ok=True)
+    request.node.screenshot_dir.mkdir(parents=True, exist_ok=True)
     
     # Initialize log capture for this test
     if not hasattr(request.node, 'log_capture'):

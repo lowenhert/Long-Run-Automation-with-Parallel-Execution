@@ -16,6 +16,7 @@ import yaml
 
 # Import project modules
 from core.device_manager import DeviceManager
+from core.report_manager import ReportGenerator
 from libraries.DeviceController import DeviceController
 from core.email_sender import EmailSender
 from core.test_scheduler import TestScheduler
@@ -218,214 +219,137 @@ class InteractiveTestRunner:
     # Test Modules
     # ──────────────────────────────────────────────────────────────
 
+    def _run_device_test(self, device_id, test_file, exec_id, test_name, log_filename, report_filename):
+        """Run a single test on a single device. Returns (device_id, success, message)."""
+        device_safe = device_id.replace(':', '_').replace('.', '_')
+        exec_dir = Path("TestResults") / exec_id / f"device_{device_safe}"
+        exec_dir.mkdir(parents=True, exist_ok=True)
+
+        env = os.environ.copy()
+        env["DEVICE_ID"] = device_id
+        env["DEVICE_NAME"] = device_id
+        env["TARGET_DEVICE"] = device_id
+        env["EXECUTION_ID"] = exec_id
+
+        cmd = [
+            self.python_exe, "-m", "pytest",
+            test_file,
+            "-v", "--tb=short", "--capture=no",
+            "--log-cli-level=DEBUG",
+            "--log-cli-format=%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+            "--log-file-level=DEBUG",
+            f"--log-file={exec_dir}/{log_filename}",
+            f"--html={exec_dir}/{report_filename}",
+            "--self-contained-html",
+        ]
+        print(f"  [{device_id}] Running {test_name} test…")
+        try:
+            result = subprocess.run(
+                cmd, env=env, capture_output=True, text=True, timeout=30000
+            )
+            success = result.returncode == 0
+            symbol = "✅" if success else "❌"
+            status = "PASSED" if success else "FAILED"
+            print(f"  [{device_id}] {symbol} {test_name} {status}")
+            if not success and result.stderr:
+                print(f"  [{device_id}]   stderr: {result.stderr[:300]}")
+            return (device_id, success, status)
+        except subprocess.TimeoutExpired:
+            print(f"  [{device_id}] ⏰ {test_name} TIMED OUT")
+            return (device_id, False, "TIMED OUT")
+        except Exception as e:
+            print(f"  [{device_id}] ❌ {test_name} ERROR: {e}")
+            return (device_id, False, str(e))
+
+    def _run_tests_parallel(self, selected_devices, test_file, exec_id, test_name, log_filename, report_filename):
+        """Run a test on multiple devices in parallel using ThreadPoolExecutor."""
+        with ThreadPoolExecutor(max_workers=len(selected_devices)) as executor:
+            futures = {
+                executor.submit(
+                    self._run_device_test, device_id, test_file,
+                    exec_id, test_name, log_filename, report_filename
+                ): device_id
+                for device_id in selected_devices
+            }
+            results = {}
+            for future in as_completed(futures):
+                device_id = futures[future]
+                try:
+                    results[device_id] = future.result()
+                except Exception as e:
+                    print(f"  [{device_id}] ❌ {test_name} UNEXPECTED ERROR: {e}")
+                    results[device_id] = (device_id, False, str(e))
+
+        # Merge per-device Excel reports into one combined report
+        exec_root = Path("TestResults") / exec_id
+        try:
+            merged = ReportGenerator.merge_device_reports(exec_root)
+            if merged:
+                print(f"  📊 Combined Excel report saved: {merged}")
+        except Exception as e:
+            print(f"  ⚠️  Failed to merge Excel reports: {e}")
+
+        return results
+
     def _run_parental_lock_test(self, selected_devices):
-        """Run the Parental Lock Setup test on selected devices."""
+        """Run the Parental Lock Setup test on selected devices in parallel."""
         exec_id = datetime.now().strftime("Execution_%Y%m%d_%H%M%S")
-        test_file = "test/test_parental_lock_setup.py"
 
         print(f"\n🔒 Running Parental Lock Setup test")
         print(f"🆔 Execution ID: {exec_id}")
 
-        for device_id in selected_devices:
-            device_safe = device_id.replace(':', '_').replace('.', '_')
-            exec_dir = Path("TestResults") / exec_id / f"device_{device_safe}"
-            exec_dir.mkdir(parents=True, exist_ok=True)
-
-            env = os.environ.copy()
-            env["DEVICE_ID"] = device_id
-            env["DEVICE_NAME"] = device_id
-            env["TARGET_DEVICE"] = device_id
-            env["EXECUTION_ID"] = exec_id
-
-            cmd = [
-                self.python_exe, "-m", "pytest",
-                test_file,
-                "-v", "--tb=short", "--capture=no",
-                "--log-cli-level=DEBUG",
-                "--log-cli-format=%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-                "--log-file-level=DEBUG",
-                f"--log-file={exec_dir}/test_parental_lock.log",
-                f"--html={exec_dir}/report_parental_lock.html",
-                "--self-contained-html",
-            ]
-            print(f"  [{device_id}] Running parental lock test…")
-            try:
-                result = subprocess.run(
-                    cmd, env=env, capture_output=True, text=True, timeout=30000
-                )
-                symbol = "✅" if result.returncode == 0 else "❌"
-                print(
-                    f"  [{device_id}] {symbol} Parental Lock "
-                    f"{'PASSED' if result.returncode == 0 else 'FAILED'}"
-                )
-                if result.returncode != 0 and result.stderr:
-                    print(f"  [{device_id}]   stderr: {result.stderr[:300]}")
-            except subprocess.TimeoutExpired:
-                print(f"  [{device_id}] ⏰ Parental Lock TIMED OUT")
-            except Exception as e:
-                print(f"  [{device_id}] ❌ Parental Lock ERROR: {e}")
+        self._run_tests_parallel(
+            selected_devices, "test/test_parental_lock_setup.py",
+            exec_id, "Parental Lock", "test_parental_lock.log", "report_parental_lock.html"
+        )
 
         self.last_execution_dir = Path("TestResults") / exec_id
         print("\n🎉 Parental Lock test completed!")
         return self.last_execution_dir
 
     def _run_favourite_channels_test(self, selected_devices, existing_exec_dir=None):
-        """Run the Favourite Channels Setup test on selected devices."""
-        if existing_exec_dir:
-            exec_id = existing_exec_dir.name
-        else:
-            exec_id = datetime.now().strftime("Execution_%Y%m%d_%H%M%S")
-        test_file = "test/test_favourite_channels_setup.py"
+        """Run the Favourite Channels Setup test on selected devices in parallel."""
+        exec_id = existing_exec_dir.name if existing_exec_dir else datetime.now().strftime("Execution_%Y%m%d_%H%M%S")
 
         print(f"\n⭐ Running Favourite Channels Setup test")
         print(f"🆔 Execution ID: {exec_id}")
 
-        for device_id in selected_devices:
-            device_safe = device_id.replace(':', '_').replace('.', '_')
-            exec_dir = Path("TestResults") / exec_id / f"device_{device_safe}"
-            exec_dir.mkdir(parents=True, exist_ok=True)
-
-            env = os.environ.copy()
-            env["DEVICE_ID"] = device_id
-            env["DEVICE_NAME"] = device_id
-            env["TARGET_DEVICE"] = device_id
-            env["EXECUTION_ID"] = exec_id
-
-            cmd = [
-                self.python_exe, "-m", "pytest",
-                test_file,
-                "-v", "--tb=short", "--capture=no",
-                "--log-cli-level=DEBUG",
-                "--log-cli-format=%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-                "--log-file-level=DEBUG",
-                f"--log-file={exec_dir}/test_favourite_channels.log",
-                f"--html={exec_dir}/report_favourite_channels.html",
-                "--self-contained-html",
-            ]
-            print(f"  [{device_id}] Running favourite channels test…")
-            try:
-                result = subprocess.run(
-                    cmd, env=env, capture_output=True, text=True, timeout=30000
-                )
-                symbol = "✅" if result.returncode == 0 else "❌"
-                print(
-                    f"  [{device_id}] {symbol} Favourite Channels "
-                    f"{'PASSED' if result.returncode == 0 else 'FAILED'}"
-                )
-                if result.returncode != 0 and result.stderr:
-                    print(f"  [{device_id}]   stderr: {result.stderr[:300]}")
-            except subprocess.TimeoutExpired:
-                print(f"  [{device_id}] ⏰ Favourite Channels TIMED OUT")
-            except Exception as e:
-                print(f"  [{device_id}] ❌ Favourite Channels ERROR: {e}")
+        self._run_tests_parallel(
+            selected_devices, "test/test_favourite_channels_setup.py",
+            exec_id, "Favourite Channels", "test_favourite_channels.log", "report_favourite_channels.html"
+        )
 
         self.last_execution_dir = Path("TestResults") / exec_id
         print("\n🎉 Favourite Channels test completed!")
         return self.last_execution_dir
 
     def _run_audio_change_test(self, selected_devices, existing_exec_dir=None):
-        """Run the audio change Setup test on selected devices."""
-        if existing_exec_dir:
-            exec_id = existing_exec_dir.name
-        else:
-            exec_id = datetime.now().strftime("Execution_%Y%m%d_%H%M%S")
-        test_file = "test/test_audio_change.py"
+        """Run the audio change Setup test on selected devices in parallel."""
+        exec_id = existing_exec_dir.name if existing_exec_dir else datetime.now().strftime("Execution_%Y%m%d_%H%M%S")
 
         print(f"\n⭐ Running Audio Change Setup test")
         print(f"🆔 Execution ID: {exec_id}")
 
-        for device_id in selected_devices:
-            device_safe = device_id.replace(':', '_').replace('.', '_')
-            exec_dir = Path("TestResults") / exec_id / f"device_{device_safe}"
-            exec_dir.mkdir(parents=True, exist_ok=True)
-
-            env = os.environ.copy()
-            env["DEVICE_ID"] = device_id
-            env["DEVICE_NAME"] = device_id
-            env["TARGET_DEVICE"] = device_id
-            env["EXECUTION_ID"] = exec_id
-
-            cmd = [
-                self.python_exe, "-m", "pytest",
-                test_file,
-                "-v", "--tb=short", "--capture=no",
-                "--log-cli-level=DEBUG",
-                "--log-cli-format=%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-                "--log-file-level=DEBUG",
-                f"--log-file={exec_dir}/test_audio_configurations.log",
-                f"--html={exec_dir}/report_audio_configurations.html",
-                "--self-contained-html",
-            ]
-            print(f"  [{device_id}] Running audio change test…")
-            try:
-                result = subprocess.run(
-                    cmd, env=env, capture_output=True, text=True, timeout=30000
-                )
-                symbol = "✅" if result.returncode == 0 else "❌"
-                print(
-                    f"  [{device_id}] {symbol} Audio Change "
-                    f"{'PASSED' if result.returncode == 0 else 'FAILED'}"
-                )
-                if result.returncode != 0 and result.stderr:
-                    print(f"  [{device_id}]   stderr: {result.stderr[:300]}")
-            except subprocess.TimeoutExpired:
-                print(f"  [{device_id}] ⏰ Audio change test TIMED OUT")
-            except Exception as e:
-                print(f"  [{device_id}] ❌ Audio change test ERROR: {e}")
+        self._run_tests_parallel(
+            selected_devices, "test/test_audio_change.py",
+            exec_id, "Audio Change", "test_audio_configurations.log", "report_audio_configurations.html"
+        )
 
         self.last_execution_dir = Path("TestResults") / exec_id
         print("\n🎉 Audio change test completed!")
         return self.last_execution_dir
 
     def _run_remote_pairing_test(self, selected_devices, existing_exec_dir=None):
-        """Run the Remote Pairing Check test on selected devices."""
-        if existing_exec_dir:
-            exec_id = existing_exec_dir.name
-        else:
-            exec_id = datetime.now().strftime("Execution_%Y%m%d_%H%M%S")
-        test_file = "test/test_remote_pairing.py"
+        """Run the Remote Pairing Check test on selected devices in parallel."""
+        exec_id = existing_exec_dir.name if existing_exec_dir else datetime.now().strftime("Execution_%Y%m%d_%H%M%S")
 
         print(f"\n📡 Running Remote Pairing Check test")
         print(f"🆔 Execution ID: {exec_id}")
 
-        for device_id in selected_devices:
-            device_safe = device_id.replace(':', '_').replace('.', '_')
-            exec_dir = Path("TestResults") / exec_id / f"device_{device_safe}"
-            exec_dir.mkdir(parents=True, exist_ok=True)
-
-            env = os.environ.copy()
-            env["DEVICE_ID"] = device_id
-            env["DEVICE_NAME"] = device_id
-            env["TARGET_DEVICE"] = device_id
-            env["EXECUTION_ID"] = exec_id
-
-            cmd = [
-                self.python_exe, "-m", "pytest",
-                test_file,
-                "-v", "--tb=short", "--capture=no",
-                "--log-cli-level=DEBUG",
-                "--log-cli-format=%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-                "--log-file-level=DEBUG",
-                f"--log-file={exec_dir}/test_remote_pairing.log",
-                f"--html={exec_dir}/report_remote_pairing.html",
-                "--self-contained-html",
-            ]
-            print(f"  [{device_id}] Running remote pairing check…")
-            try:
-                result = subprocess.run(
-                    cmd, env=env, capture_output=True, text=True, timeout=30000
-                )
-                symbol = "✅" if result.returncode == 0 else "❌"
-                print(
-                    f"  [{device_id}] {symbol} Remote Pairing "
-                    f"{'PASSED' if result.returncode == 0 else 'FAILED'}"
-                )
-                if result.returncode != 0 and result.stderr:
-                    print(f"  [{device_id}]   stderr: {result.stderr[:300]}")
-            except subprocess.TimeoutExpired:
-                print(f"  [{device_id}] ⏰ Remote Pairing TIMED OUT")
-            except Exception as e:
-                print(f"  [{device_id}] ❌ Remote Pairing ERROR: {e}")
+        self._run_tests_parallel(
+            selected_devices, "test/test_remote_pairing.py",
+            exec_id, "Remote Pairing", "test_remote_pairing.log", "report_remote_pairing.html"
+        )
 
         self.last_execution_dir = Path("TestResults") / exec_id
         print("\n🎉 Remote Pairing check completed!")
