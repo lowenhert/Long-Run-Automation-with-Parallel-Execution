@@ -18,7 +18,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-log = logging.getLogger("TestSoundConfiguration")
+log = logging.getLogger("TestAudioChange")
 
 # ─── Load settings ───────────────────────────────────────────────────────────
 with open("config/settings.yaml") as f:
@@ -26,7 +26,7 @@ with open("config/settings.yaml") as f:
 
 LOGO_DIR = Path("libraries/Screenshots_AppLogo")
 
-# ─── Sound config from settings.yaml ────────────────────────────
+# ─── Audio Change from settings.yaml ────────────────────────────
 Audio_CFG = SETTINGS.get("Audio", {})
 TATASKY_PACKAGE = Audio_CFG.get("app_package", "tv.accedo.studio.paytv.tatasky")
 NAV_CFG = Audio_CFG.get("navigation", {})
@@ -37,13 +37,13 @@ UI_IDS = Audio_CFG.get("ui_ids", {})
 #CHANNELS_TO_FAVOURITE = FAV_CFG.get("channels_to_favourite", 0)  # 0 = favourite ALL
 
 
-class TestSoundConfigurationSetup:
+class TestAudioChangeSetup:
 
     @pytest.fixture(scope="function", autouse=True)
     def setup(self, request):
         """Setup test environment with ADB device + Appium session"""
         log.info("=" * 60)
-        log.info("SETUP — Sound Configuration test initialisation")
+        log.info("SETUP — Audio Configuration test initialisation")
 
         # ── Resolve device ID ────────────────────────────────────────
         self.device_id = (
@@ -98,7 +98,7 @@ class TestSoundConfigurationSetup:
     def _take_step_screenshot(self, step_number, label=""):
         """Take a screenshot for the given step and return the saved path."""
         safe_label = label.replace(" ", "_").replace("/", "_")[:40]
-        filename = f"sound_step{step_number}_{safe_label}_{self.device_id.replace(':', '_')}.png"
+        filename = f"audio_step{step_number}_{safe_label}_{self.device_id.replace(':', '_')}.png"
         save_path = self.screenshots_folder / filename
         try:
             self.device.take_screenshot(str(save_path))
@@ -111,7 +111,7 @@ class TestSoundConfigurationSetup:
     #  MAIN TEST
     # ══════════════════════════════════════════════════════════════════
 
-    def test_sound_configuration(self, request):
+    def test_audio_change(self, request):
         step_results = []
 
         status = "PASSED"
@@ -263,80 +263,112 @@ class TestSoundConfigurationSetup:
             mal_xpath = '//android.widget.TextView[@resource-id="tv.accedo.studio.paytv.tatasky:id/textView" and @text="Malayalam"]'
             current_step = 6
             down_count = Audio_Nav.get("navigate_down", 1)
-            right_count = Audio_Nav.get("navigate_malayalam", 2)
+            #right_count = Audio_Nav.get("navigate_malayalam", 2)
 
             for i in range(down_count):
                 self.device.navigate_down()
 
-            for j in range(right_count):
-                self.device.navigate_right()
-
             log.info("[STEP 6] ✓ Audio language change step")
+            count_mal=0
+            for i in range(22):
+                if self.ui.exists_by_xpath(mal_xpath, timeout=3):
+                    log.info("[STEP 6] Malayalam Language detected")
+                    count_mal=1
+                    break
+                else:
+                    self.device.navigate_right()
+                    log.info("[STEP 6] Audio not changed")
 
-            ss6 = self._take_step_screenshot(5, "Audio change")
+            ss6 = self._take_step_screenshot(6, "Audio change")
 
-            if self.ui.exists_by_xpath(mal_xpath, timeout=3):
-                try:
-                    if self.ui.exists_by_xpath(mal_xpath, timeout=5):
-                        log.info("[STEP 6] Malayalam Language detected")
-                        time.sleep(1)
-                except AssertionError:
-                    log.warning(f"[STEP 6] Malayalam Langauge not detected")
-                    _record_step(6, "Audio change",
-                                 "Audio not changed to Malayalam ",
-                                 "FAILED", ss6)
-            else:
-                log.info("[STEP 6] Audio not changed")
+            if count_mal==0:
+                log.warning(f"[STEP 6] Malayalam not detected")
+                _record_step(7, "Audio change",
+                             "Audio not changed to Malayalam ",
+                             "FAILED", ss6)
+                assert count_mal != 0, "Malayalam not detected "
+
+            else :
+                log.info("Malayalam detected")
+                _record_step(6, "Audio change",
+                             "Audio changed to Malayalam",
+                             "PASSED", ss6)
 
 
-           #checking Apply button
+            # ─────────────────────────────────────────────────────────
+            # STEP 7 — Change Playback resolution to Always
+            # ─────────────────────────────────────────────────────────
+            High_icon_xpath = ('//android.widget.TextView[@resource-id="tv.accedo.studio.paytv.tatasky:id/textView" and @text="HIGH"]')
+            current_step = 7
             self.device.navigate_down()
+            log.info("[Step 7]Changing playback resolution to Always")
+
+            count=0
+            for i in range(4):
+                if self.ui.exists_by_xpath(High_icon_xpath, timeout=3):
+                    log.info("[STEP 7] ✓ High text found")
+                    count=1
+                    break
+                else:
+                    self.device.navigate_right()
+                    log.info("[STEP 7] High not found, pressing right key")
+
+            ss7 = self._take_step_screenshot(7, "Resolution change")
+            if count==0:
+                log.warning(f"[STEP 7] High icon not detected")
+                _record_step(7, "Resolution change",
+                             "Resolution not changed to High ",
+                             "FAILED", ss7)
+                assert count != 0, "Always icon not detected - Resolution not changed to High"
+
+            #checking Apply button
             self.device.navigate_down()
             Apply=UI_IDS.get("Apply_btn")
 
             if self.ui.exists_by_id(Apply, timeout=3):
                 # Cursor is on Apply — click it with D-pad SELECT
                 self.device.select()
-                log.info("[STEP 6] ✓ Audio language changed , Apply button selected")
+                log.info("[STEP 7] ✓ Audio language changed , Apply button selected")
 
                 # Wait for / skip the snackbar triggered by Apply
                 time.sleep(1)  # Wait a bit for snackbar to appear
-                ss6 = self._take_step_screenshot(6, "Audio change")
+                ss7 = self._take_step_screenshot(7, "Resolution change")
                 try:
                     if self.ui.exists_by_xpath(tick_icon_xpath, timeout=5):
-                        log.info("[STEP 6] Tick icon detected — waiting for it to disappear…")
+                        log.info("[STEP 7] Tick icon detected — waiting for it to disappear…")
                         time.sleep(7)
                 except AssertionError:
-                    log.warning(f"[STEP 6] Apply tick not detected")
-                    _record_step(6, "Audio change",
-                                 "Audio not changed to Malayalam ",
-                                 "FAILED", ss6)
+                    log.warning(f"[STEP 7] Apply tick not detected")
+                    _record_step(7, "Resolution change",
+                                 "Apply tick not detected ",
+                                 "FAILED", ss7)
             else:
-                log.info("[STEP 6] Audio not changed")
-                _record_step(6, "Audio change",
-                             "Audio not changed to Malayalam ",
-                             "FAILED", ss6)
+                ss7 = self._take_step_screenshot(7, "Resolution change")
+                log.info("[STEP 7] Audio not changed")
+                _record_step(7, "Resolution change",
+                             "Apply button not detected ",
+                             "FAILED", ss7)
 
-            log.info("[STEP 6] ✓ Audio changed")
-            _record_step(6, "Audio change",
-                         "Audio changed to Malayalam ",
-                         "PASSED", ss6)
+            log.info("[STEP 7] ✓ Audio and resolution changed")
+            _record_step(7, "Resolution change",
+                         "Audio changed to Malayalam and resolution changed to High",
+                         "PASSED", ss7)
 
             # ─────────────────────────────────────────────────────────
-            # STEP 7 — Press HOME
+            # STEP 8 — Press HOME
             # ─────────────────────────────────────────────────────────
-            current_step = 7
-            log.info("[STEP 7] Pressing HOME…")
+            current_step = 8
+            log.info("[STEP 8] Pressing HOME…")
             self.device.home()
             time.sleep(2)
-            log.info("[STEP 7] ✓ Back at home")
+            log.info("[STEP 8] ✓ Back at home")
             ss8 = self._take_step_screenshot(8, "back_home")
-            _record_step(7, "Press HOME",
+            _record_step(8, "Press HOME",
                          "Pressed HOME key to return to the home screen",
                          "PASSED", ss8)
 
             log.info("=" * 60)
-            log.info("TEST PASSED — Sound Configuration setup complete")
+            log.info("TEST PASSED — Audio change setup complete")
 
         except Exception as e:
             status = "FAILED"
@@ -352,7 +384,8 @@ class TestSoundConfigurationSetup:
                 4: "Click User Settings",
                 5: "Click Video Tab",
                 6: "Change Audio to Malayalam",
-                7: "Press HOME",
+                7: "Change Playback resolution",
+                8: "Press HOME",
             }
             for sn, sname in all_step_names.items():
                 if sn not in recorded_nums:
@@ -362,7 +395,7 @@ class TestSoundConfigurationSetup:
             try:
                 ss_path = (
                     self.screenshots_folder
-                    / f"FAIL_sound_configuration_{int(time.time())}_{self.device_id.replace(':', '_')}.png"
+                    / f"FAIL_audio_configuration_{int(time.time())}_{self.device_id.replace(':', '_')}.png"
                 )
                 self.device.take_screenshot(str(ss_path))
             except Exception:
@@ -372,7 +405,7 @@ class TestSoundConfigurationSetup:
 
             # ── Module-wise step-by-step Excel sheet ──────────────────
             self.report_gen.add_module_report(
-                module_name="Sound Configuration Setup",
+                module_name="Audio Configuration Setup",
                 device_id=self.device_id,
                 overall_status=status,
                 steps=sorted(step_results, key=lambda s: s["step_number"]),

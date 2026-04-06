@@ -98,7 +98,7 @@ class InteractiveTestRunner:
             exec_dir = self._run_parental_lock_test(self.devices)
             self._run_favourite_channels_test(self.devices, exec_dir)
             self._run_remote_pairing_test(self.devices, exec_dir)
-            self._run__sound_configuration_test(self.devices, exec_dir)
+            self._run_audio_change_test(self.devices, exec_dir)
             return exec_dir
         except Exception as e:
             print(f"❌ Error in scheduled test execution: {e}")
@@ -141,7 +141,7 @@ class InteractiveTestRunner:
             "test/test_parental_lock_setup.py",
             "test/test_favourite_channels_setup.py",
             "test/test_remote_pairing.py",
-            "test/test_sound_configuration.py"
+            "test/test_audio_change.py"
         ]
         for fp in required_files:
             if Path(fp).exists():
@@ -323,15 +323,15 @@ class InteractiveTestRunner:
         print("\n🎉 Favourite Channels test completed!")
         return self.last_execution_dir
 
-    def _run_sound_configuration_test(self, selected_devices, existing_exec_dir=None):
-        """Run the Sound Configuration Setup test on selected devices."""
+    def _run_audio_change_test(self, selected_devices, existing_exec_dir=None):
+        """Run the audio change Setup test on selected devices."""
         if existing_exec_dir:
             exec_id = existing_exec_dir.name
         else:
             exec_id = datetime.now().strftime("Execution_%Y%m%d_%H%M%S")
-        test_file = "test/test_sound_configuration.py"
+        test_file = "test/test_audio_change.py"
 
-        print(f"\n⭐ Running Sound Configuration Setup test")
+        print(f"\n⭐ Running Audio Change Setup test")
         print(f"🆔 Execution ID: {exec_id}")
 
         for device_id in selected_devices:
@@ -352,29 +352,29 @@ class InteractiveTestRunner:
                 "--log-cli-level=DEBUG",
                 "--log-cli-format=%(asctime)s [%(levelname)s] %(name)s: %(message)s",
                 "--log-file-level=DEBUG",
-                f"--log-file={exec_dir}/test_sound_configurations.log",
-                f"--html={exec_dir}/report_sound_configurations.html",
+                f"--log-file={exec_dir}/test_audio_configurations.log",
+                f"--html={exec_dir}/report_audio_configurations.html",
                 "--self-contained-html",
             ]
-            print(f"  [{device_id}] Running sound configurations test…")
+            print(f"  [{device_id}] Running audio change test…")
             try:
                 result = subprocess.run(
                     cmd, env=env, capture_output=True, text=True, timeout=30000
                 )
                 symbol = "✅" if result.returncode == 0 else "❌"
                 print(
-                    f"  [{device_id}] {symbol} Sound Configuration "
+                    f"  [{device_id}] {symbol} Audio Change "
                     f"{'PASSED' if result.returncode == 0 else 'FAILED'}"
                 )
                 if result.returncode != 0 and result.stderr:
                     print(f"  [{device_id}]   stderr: {result.stderr[:300]}")
             except subprocess.TimeoutExpired:
-                print(f"  [{device_id}] ⏰ Sound Configuration TIMED OUT")
+                print(f"  [{device_id}] ⏰ Audio change test TIMED OUT")
             except Exception as e:
-                print(f"  [{device_id}] ❌ Sound Configuration ERROR: {e}")
+                print(f"  [{device_id}] ❌ Audio change test ERROR: {e}")
 
         self.last_execution_dir = Path("TestResults") / exec_id
-        print("\n🎉 Sound Configuration test completed!")
+        print("\n🎉 Audio change test completed!")
         return self.last_execution_dir
 
     def _run_remote_pairing_test(self, selected_devices, existing_exec_dir=None):
@@ -446,13 +446,13 @@ class InteractiveTestRunner:
             print("  • Parental Lock Setup (Channel Lock)")
             print("  • Favourite Channels Setup")
             print("  • Remote Pairing Check")
-            print("  • Sound Configuration Check")
+            print("  • Audio Change Check")
             print("\nSelect an option:")
             print("1. 🔌 Test Device Connectivity")
             print("2. 🔒 Run Parental Lock Setup Test")
             print("3. ⭐ Run Favourite Channels Setup Test")
             print("4. 📡 Run Remote Pairing Check Test")
-            print("5. 📡 Run Sound Configuration Test")
+            print("5. 📡 Run Audio Change Test")
             print("6. 🚀 Run All Tests")
             print("7. 📅 Schedule Tests")
             print("8. 📧 Email Report (Last Execution)")
@@ -506,7 +506,7 @@ class InteractiveTestRunner:
 
                 elif choice == '5':
                     selected_devices = self.select_devices()
-                    self._run_sound_configuration_test(selected_devices)
+                    self._run_audio_change_test(selected_devices)
 
                     if (self.last_execution_dir and self.email_sender
                             and self.email_sender.enabled):
@@ -522,7 +522,7 @@ class InteractiveTestRunner:
                     exec_dir = self._run_parental_lock_test(selected_devices)
                     self._run_favourite_channels_test(selected_devices, exec_dir)
                     self._run_remote_pairing_test(selected_devices, exec_dir)
-                    self._run_sound_configuration_test(selected_devices, exec_dir)
+                    self._run_audio_change_test(selected_devices, exec_dir)
 
                     if (self.last_execution_dir and self.email_sender
                             and self.email_sender.enabled):
