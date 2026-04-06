@@ -110,3 +110,54 @@ email:
     - "sharma.aman1511@gmail.com"
     - "janhavi.srivastava710@gmail.com"
   subject_prefix: "Automated OTT Playback Check"
+
+# Display Resolution Setup Configuration
+display_resolution:
+  appium_url: "http://localhost:4723"
+  navigation:
+    up_presses: 1                      # presses UP from home to reach settings row
+    right_presses: 3                   # presses RIGHT to reach Android TV Settings
+  home_check:
+    logo_file: "Home.png"
+    region: [90, 120, 260, 180]        # x, y, width, height
+    threshold: 0.60
+    max_attempts: 4
+  reboot_wait_seconds: 60              # seconds to wait for device reboot after resolution change
+  max_home_presses: 15                 # max HOME presses to detect home after reboot
+  display_down_presses: 11             # DOWN presses from Device Preferences to reach Display
+  ui_ids:
+    settings_title: "com.android.tv.settings:id/decor_title"
+    display_title: "com.technicolor.tv.settings.device.display:id/decor_title"
+  expected_texts:
+    settings: "Settings"
+    device_preferences: "Device Preferences"
+    display: "Display"
+  xpaths:
+    device_preferences: '//android.widget.TextView[@resource-id="android:id/title" and @text="Device Preferences"]'
+    resolution_option: '//androidx.recyclerview.widget.RecyclerView[@resource-id="com.technicolor.tv.settings.device.display:id/list"]/android.widget.LinearLayout[1]'
+    resolution_container: '(//android.widget.LinearLayout[@resource-id="com.technicolor.tv.settings.device.display:id/container"])[2]'
+    resolution_confirm: '//androidx.recyclerview.widget.RecyclerView[@resource-id="com.technicolor.tv.settings.device.display:id/guidedactions_list"]/android.widget.LinearLayout[2]'
+
+# Banner Configuration Setup
+banner_configuration:
+  app_package: "tv.accedo.studio.paytv.tatasky"
+  appium_url: "http://localhost:4723"
+  navigation:
+    up_presses: 1                      # presses UP from home to reach settings row
+    right_presses: 4                   # presses RIGHT to reach User Preferences
+  home_check:
+    logo_file: "Home.png"
+    region: [90, 120, 260, 180]
+    threshold: 0.60
+    max_attempts: 4
+  expected_user_prefs_title: "USER PREFERENCES"
+  target_duration_text: "10 seconds"   # banner duration value to set
+  max_arrow_clicks: 20                 # max clicks on next-value arrow to reach target
+  ui_ids:
+    title: "tv.accedo.studio.paytv.tatasky:id/textViewTitle"
+    user_settings_btn: "tv.accedo.studio.paytv.tatasky:id/buttonUserSettings"
+    banner_duration: "tv.accedo.studio.paytv.tatasky:id/textView"
+    continue_btn: "tv.accedo.studio.paytv.tatasky:id/continuePictureSetting"
+  xpaths:
+    banner_menu: '//android.widget.CheckedTextView[@resource-id="tv.accedo.studio.paytv.tatasky:id/menu_item" and @text="Banner"]'
+    next_value_arrow: '//android.widget.LinearLayout[@resource-id="tv.accedo.studio.paytv.tatasky:id/child_relative_layout"]/android.widget.ImageView[2]'
