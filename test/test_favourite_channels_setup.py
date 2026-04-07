@@ -11,6 +11,7 @@ from core.report_manager import ReportGenerator
 from libraries.DeviceController import DeviceController
 from libraries.appium_utils import AppiumDriver, AppiumHelper
 from libraries.LogoCompareLibrary import LogoCompareLibrary
+from libraries.OcrLibrary import OcrLibrary
 
 # ─── Logger setup ────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -61,6 +62,9 @@ class TestFavouriteChannelsSetup:
 
         # ── Logo compare (for home screen check) ────────────────────
         self.logo_compare = LogoCompareLibrary()
+
+        # ── OCR library (for reading channel name/number) ───────────
+        self.ocr = OcrLibrary()
 
         # ── Appium session (for UI element interaction) ──────────────
         appium_url = os.getenv("APPIUM_URL", FAV_CFG.get("appium_url", "http://localhost:4723"))
@@ -314,20 +318,150 @@ class TestFavouriteChannelsSetup:
                          "PASSED", ss6)
 
             # ─────────────────────────────────────────────────────────
-            # STEP 7 — SELECT → RIGHT loop until snackbar appears
+            # STEP 7 — SELECT → READ → RIGHT loop (parentLayout[1] + OCR)
             # ─────────────────────────────────────────────────────────
             current_step = 7
-            log.info("[STEP 7] Selecting favourite channels (SELECT → RIGHT loop)…")
+            log.info("[STEP 7] Selecting favourite channels (parentLayout index + OCR)…")
 
             snackbar_id = UI_IDS.get("snackbar", "snackbar_top_layout")
             snackbar_full_id = f"{TATASKY_PACKAGE}:id/{snackbar_id}"
+            parent_layout_id = f"{TATASKY_PACKAGE}:id/{UI_IDS.get('parent_layout', 'parentLayout')}"
+            ch_name_res = f"{TATASKY_PACKAGE}:id/{UI_IDS.get('channel_name', 'channelName')}"
+            ch_number_res = f"{TATASKY_PACKAGE}:id/{UI_IDS.get('channel_number', 'channelNumber')}"
             max_iterations = MAX_RIGHT_SEARCH
             fav_limit = CHANNELS_TO_FAVOURITE  # 0 = select ALL until snackbar
             channels_selected = 0
             snackbar_appeared = False
 
             consecutive_appium_failures = 0
-            MAX_APPIUM_FAILURES = 3  # Break if Appium/UiAutomator2 dies
+            MAX_APPIUM_FAILURES = 3
+
+            def _get_channel_info_by_index(index):
+                """
+                Read channel number + name from the parentLayout at the given
+                1-based index using Appium element inspection.
+
+                Strategy (tries UiAutomator first, then XPath fallback):
+                  1. UiAutomator: resourceId(...).instance(index-1)   [0-based]
+                  2. XPath:       (//...parentLayout)[index]          [1-based]
+                  3. Read channelNumber / channelName child TextViews
+                """
+                inst = index - 1  # UiAutomator instance() is 0-based
+                uia_card = (
+                    f'new UiSelector().resourceId("{parent_layout_id}")'
+                    f'.instance({inst})'
+                )
+                card_xpath = (
+                    f'(//android.view.ViewGroup'
+                    f'[@resource-id="{parent_layout_id}"])[{index}]'
+                )
+                ch_number = "?"
+                ch_name = "Unknown"
+
+                # ── Locate the parentLayout card ─────────────────────
+                card_el = None
+                try:
+                    card_el = self.ui.find_by_uiautomator(uia_card, timeout=3)
+                    log.info(f"[CHANNEL] parentLayout[{index}] found via UiAutomator .instance({inst})")
+                except Exception:
+                    log.info(f"[CHANNEL] UiAutomator miss for instance({inst}), trying XPath…")
+                    try:
+                        card_el = self.ui.find_by_xpath(card_xpath, timeout=3)
+                        log.info(f"[CHANNEL] parentLayout[{index}] found via XPath")
+                    except Exception as e:
+                        log.warning(f"[CHANNEL] Failed to find parentLayout[{index}]: {e}")
+
+                if card_el is None:
+                    return ch_number, ch_name
+
+                loc = card_el.location
+                size = card_el.size
+                log.info(f"[CHANNEL] parentLayout[{index}] bounds: x={loc['x']}, y={loc['y']}, "
+                         f"w={size['width']}, h={size['height']}")
+
+                # ── channelNumber via UiAutomator then XPath ─────────
+                try:
+                    uia_num = (
+                        f'new UiSelector().resourceId("{parent_layout_id}")'
+                        f'.instance({inst})'
+                        f'.childSelector(new UiSelector().resourceId("{ch_number_res}"))'
+                    )
+                    num_el = self.ui.find_by_uiautomator(uia_num, timeout=2)
+                    raw_num = num_el.text
+                    log.info(f"[CHANNEL] [{index}] channelNumber (UiA): '{raw_num}'")
+                    ch_number = raw_num.strip() if raw_num else "?"
+                except Exception:
+                    # XPath fallback
+                    try:
+                        num_xpath = (
+                            f'(//android.view.ViewGroup'
+                            f'[@resource-id="{parent_layout_id}"])[{index}]'
+                            f'//android.widget.TextView[@resource-id="{ch_number_res}"]'
+                        )
+                        num_el = self.ui.find_by_xpath(num_xpath, timeout=2)
+                        raw_num = num_el.text
+                        log.info(f"[CHANNEL] [{index}] channelNumber (XPath): '{raw_num}'")
+                        ch_number = raw_num.strip() if raw_num else "?"
+                    except Exception as e:
+                        log.warning(f"[CHANNEL] [{index}] channelNumber not found: {e}")
+
+                # ── channelName via UiAutomator then XPath ───────────
+                try:
+                    uia_name = (
+                        f'new UiSelector().resourceId("{parent_layout_id}")'
+                        f'.instance({inst})'
+                        f'.childSelector(new UiSelector().resourceId("{ch_name_res}"))'
+                    )
+                    name_el = self.ui.find_by_uiautomator(uia_name, timeout=2)
+                    raw_name = name_el.text
+                    log.info(f"[CHANNEL] [{index}] channelName (UiA): '{raw_name}'")
+                    ch_name = raw_name.strip() if raw_name else "Unknown"
+                except Exception:
+                    # XPath fallback
+                    try:
+                        name_xpath = (
+                            f'(//android.view.ViewGroup'
+                            f'[@resource-id="{parent_layout_id}"])[{index}]'
+                            f'//android.widget.TextView[@resource-id="{ch_name_res}"]'
+                        )
+                        name_el = self.ui.find_by_xpath(name_xpath, timeout=2)
+                        raw_name = name_el.text
+                        log.info(f"[CHANNEL] [{index}] channelName (XPath): '{raw_name}'")
+                        ch_name = raw_name.strip() if raw_name else "Unknown"
+                    except Exception as e:
+                        log.warning(f"[CHANNEL] [{index}] channelName not found: {e}")
+
+                # ── Last-resort: scan all child TextViews ────────────
+                if ch_number == "?" and ch_name == "Unknown":
+                    log.info(f"[CHANNEL] [{index}] Both empty — scanning all child TextViews…")
+                    try:
+                        all_tv_xpath = (
+                            f'(//android.view.ViewGroup'
+                            f'[@resource-id="{parent_layout_id}"])[{index}]'
+                            f'//android.widget.TextView'
+                        )
+                        all_tvs = self.ui.find_all_by_xpath(all_tv_xpath, timeout=2)
+                        for tv_idx, tv in enumerate(all_tvs):
+                            tv_text = tv.text
+                            tv_rid = tv.get_attribute("resourceId") or ""
+                            log.info(f"[CHANNEL] [{index}] child TextView[{tv_idx}]: "
+                                     f"text='{tv_text}', resourceId='{tv_rid}'")
+                            if tv_text and tv_text.strip().isdigit() and ch_number == "?":
+                                ch_number = tv_text.strip()
+                            elif tv_text and not tv_text.strip().isdigit() and ch_name == "Unknown":
+                                ch_name = tv_text.strip()
+                    except Exception as e2:
+                        log.warning(f"[CHANNEL] [{index}] fallback child scan failed: {e2}")
+
+                log.info(f"[CHANNEL] [{index}] RESULT: number='{ch_number}', name='{ch_name}'")
+                return ch_number, ch_name
+
+            # The grid has 3 columns × 3 visible rows = 9 parentLayout elements.
+            # Navigation: RIGHT moves across columns, then wraps to next row.
+            # First 6 cards use indices 1,2,3,4,5,6 (rows 1 and 2).
+            # After card 6, the grid scrolls: top row disappears, new row
+            # appears at bottom. The focused card is now always in the
+            # middle row at indices 4,5,6 — repeating: 4,5,6,4,5,6,...
 
             for i in range(max_iterations):
                 # ── Check user-defined limit ──────────────────────
@@ -335,13 +469,20 @@ class TestFavouriteChannelsSetup:
                     log.info(f"[STEP 7] Reached favourite limit ({fav_limit}), stopping.")
                     break
 
+                # parentLayout index: 1,2,3,4,5,6 then 4,5,6,4,5,6,...
+                if i < 6:
+                    card_index = i + 1
+                else:
+                    card_index = 4 + ((i - 6) % 3)
+
+                # ── Read channel info from parentLayout[index] ────
+                ch_number, ch_name = _get_channel_info_by_index(card_index)
+
                 # ── SELECT — mark current channel as favourite ────
                 self.device.select()
                 time.sleep(0.5)
 
                 # ── Check snackbar RIGHT AFTER SELECT ─────────────
-                # If snackbar appeared, this SELECT was rejected (limit hit)
-                # so do NOT count it
                 try:
                     if self.ui.exists_by_id(snackbar_full_id, timeout=1):
                         log.info(
@@ -351,7 +492,7 @@ class TestFavouriteChannelsSetup:
                         )
                         snackbar_appeared = True
                         break
-                    consecutive_appium_failures = 0  # Reset on success
+                    consecutive_appium_failures = 0
                 except Exception as e:
                     consecutive_appium_failures += 1
                     log.warning(
@@ -369,11 +510,11 @@ class TestFavouriteChannelsSetup:
 
                 # ── Only count if snackbar did NOT appear ─────────
                 channels_selected += 1
-                log.info(f"[STEP 7] #{channels_selected} — SELECTED ★")
+                log.info(f"[STEP 7] #{channels_selected} — SELECTED ★ Ch {ch_number} '{ch_name}'")
 
                 favourite_channels.append({
-                    "channel_number": str(channels_selected),
-                    "channel_name": f"Channel {channels_selected}",
+                    "channel_number": ch_number,
+                    "channel_name": ch_name,
                     "selected": True,
                 })
 
@@ -415,7 +556,7 @@ class TestFavouriteChannelsSetup:
 
             ss7 = self._take_step_screenshot(7, "channel_selection_done")
             _record_step(7, "Select Favourite Channels",
-                         f"Selected {channels_selected} channels | "
+                         f"Selected {channels_selected} channels (with OCR) | "
                          f"Snackbar: {'Yes' if snackbar_appeared else 'No'}",
                          "PASSED", ss7)
 

@@ -20,8 +20,8 @@ parental_lock:
     channel_lock_menu_item: "menu_item"
     channel_row: "android:id/content"
     checkbox: "cb"
-    channel_name: "channelName"
-    channel_number: "channelNumber"
+    channel_name: "textViewChannelName"
+    channel_number: "textViewChannelNumber"
   max_down_search: 30                  # max DOWN presses to find Parental Controls
   max_right_search: 10                 # max RIGHT presses to find Channel Lock tab
   max_no_new_scrolls: 3               # stop scrolling after N scrolls with no new channels
@@ -47,8 +47,8 @@ favourite_channels:
     deselect_all_btn: "deselectAllButton"
     parent_layout: "parentLayout"
     snackbar: "snackbar_top_layout"
-    channel_name: "channelName"
-    channel_number: "channelNumber"
+    channel_name: "textViewChannelName"
+    channel_number: "textViewChannelNumber"
   max_right_favourites: 150             # max RIGHT presses when selecting channels
   channels_to_favourite: 0             # number of channels to favourite (0 = ALL until snackbar)
 
@@ -151,8 +151,9 @@ banner_configuration:
     threshold: 0.60
     max_attempts: 4
   expected_user_prefs_title: "USER PREFERENCES"
-  target_duration_text: "10 seconds"   # banner duration value to set
-  max_arrow_clicks: 20                 # max clicks on next-value arrow to reach target
+  target_duration_text: "15 seconds"   # banner duration value to set (change this to any value)
+  banner_down_presses: 1               # DOWN presses to reach the duration selector on Banner page
+  max_right_presses: 20                # max RIGHT presses to cycle through duration options
   ui_ids:
     title: "tv.accedo.studio.paytv.tatasky:id/textViewTitle"
     user_settings_btn: "tv.accedo.studio.paytv.tatasky:id/buttonUserSettings"

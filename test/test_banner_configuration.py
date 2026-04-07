@@ -31,7 +31,6 @@ TATASKY_PACKAGE = BN_CFG.get("app_package", "tv.accedo.studio.paytv.tatasky")
 NAV_CFG = BN_CFG.get("navigation", {})
 HOME_CFG = BN_CFG.get("home_check", {})
 UI_IDS = BN_CFG.get("ui_ids", {})
-XPATHS = BN_CFG.get("xpaths", {})
 
 
 class TestBannerConfiguration:
@@ -142,17 +141,14 @@ class TestBannerConfiguration:
         continue_btn_id = UI_IDS.get("continue_btn", "tv.accedo.studio.paytv.tatasky:id/continuePictureSetting")
 
         # XPaths
-        banner_menu_xpath = XPATHS.get(
+        banner_menu_xpath = BN_CFG.get("xpaths", {}).get(
             "banner_menu",
             '//android.widget.CheckedTextView[@resource-id="tv.accedo.studio.paytv.tatasky:id/menu_item" and @text="Banner"]'
         )
-        next_value_xpath = XPATHS.get(
-            "next_value_arrow",
-            '//android.widget.LinearLayout[@resource-id="tv.accedo.studio.paytv.tatasky:id/child_relative_layout"]/android.widget.ImageView[2]'
-        )
 
         target_duration = BN_CFG.get("target_duration_text", "10 seconds")
-        max_arrow_clicks = BN_CFG.get("max_arrow_clicks", 20)
+        banner_down_presses = BN_CFG.get("banner_down_presses", 1)
+        max_right_presses = BN_CFG.get("max_right_presses", 20)
 
         def _record_step(num, name, desc, st, ss_path=None, err=""):
             step_results.append({
@@ -276,50 +272,51 @@ class TestBannerConfiguration:
                          "PASSED", ss5)
 
             # ─────────────────────────────────────────────────────────
-            # STEP 6 — Verify/set banner duration to target value
+            # STEP 6 — Press DOWN to duration selector, then RIGHT until target
             # ─────────────────────────────────────────────────────────
             current_step = 6
+            log.info(f"[STEP 6] Pressing DOWN {banner_down_presses} to reach duration selector…")
+            for _ in range(banner_down_presses):
+                self.device.navigate_down()
+                time.sleep(0.4)
+
             log.info(f"[STEP 6] Checking banner duration — target: '{target_duration}'…")
             current_duration = ""
             duration_matched = False
-            clicks_used = 0
+            rights_used = 0
 
-            for click_attempt in range(max_arrow_clicks + 1):
+            for right_attempt in range(max_right_presses + 1):
                 # Read current value
                 try:
                     current_duration = self.ui.get_text_by_id(banner_duration_id, timeout=5)
                 except Exception:
                     current_duration = ""
-                log.info(f"[STEP 6] Banner duration text: '{current_duration}' (attempt {click_attempt})")
+                log.info(f"[STEP 6] Banner duration text: '{current_duration}' (attempt {right_attempt})")
 
                 if target_duration.lower() in current_duration.lower():
                     duration_matched = True
-                    clicks_used = click_attempt
-                    log.info(f"[STEP 6] ✓ Target duration '{target_duration}' reached after {click_attempt} click(s)")
+                    rights_used = right_attempt
+                    log.info(f"[STEP 6] ✓ Target duration '{target_duration}' reached after {right_attempt} RIGHT press(es)")
                     break
 
-                if click_attempt < max_arrow_clicks:
-                    # Click the next-value arrow to cycle to the next option
-                    if not self.ui.exists_by_xpath(next_value_xpath, timeout=5):
-                        log.warning("[STEP 6] Next-value arrow not found — stopping cycle")
-                        break
-                    self.ui.click_by_xpath(next_value_xpath, timeout=5)
-                    time.sleep(0.8)
+                if right_attempt < max_right_presses:
+                    self.device.navigate_right(1)
+                    time.sleep(0.5)
 
             ss6 = self._take_step_screenshot(6, "banner_duration")
             if not duration_matched:
                 _record_step(6, "Set Banner Duration",
                              f"Could not set banner duration to '{target_duration}' after "
-                             f"{max_arrow_clicks} arrow click(s). Last value: '{current_duration}'",
+                             f"{max_right_presses} RIGHT press(es). Last value: '{current_duration}'",
                              "FAILED", ss6,
                              f"Banner duration '{target_duration}' not reached. Got: '{current_duration}'")
                 raise AssertionError(
                     f"Banner duration '{target_duration}' not reached after "
-                    f"{max_arrow_clicks} attempts. Last value: '{current_duration}'"
+                    f"{max_right_presses} RIGHT presses. Last value: '{current_duration}'"
                 )
             _record_step(6, "Set Banner Duration",
                          f"Banner duration confirmed as '{current_duration}' "
-                         f"(took {clicks_used} arrow click(s))",
+                         f"(DOWN {banner_down_presses}, then {rights_used} RIGHT press(es))",
                          "PASSED", ss6)
 
             # ─────────────────────────────────────────────────────────
