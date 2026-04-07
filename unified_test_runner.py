@@ -103,6 +103,7 @@ class InteractiveTestRunner:
             self._run_display_resolution_test(self.devices, exec_dir)
             self._run_banner_configuration_test(self.devices, exec_dir)
             self._run_sound_configuration_test(self.devices, exec_dir)
+            self._run_picture_resolution_test(self.devices, exec_dir)
             return exec_dir
         except Exception as e:
             print(f"❌ Error in scheduled test execution: {e}")
@@ -148,7 +149,9 @@ class InteractiveTestRunner:
             "test/test_audio_change.py",
             "test/test_banner_configuration.py",
             "test/test_display_resolution_setup.py",
-            "test/test_sound_configuration.py"
+            "test/test_sound_configuration.py",
+            "test/test_picture_resolution.py"
+
         ]
         for fp in required_files:
             if Path(fp).exists():
@@ -408,6 +411,22 @@ class InteractiveTestRunner:
         self.last_execution_dir = Path("TestResults") / exec_id
         print("\n🎉 Sound Configuration Setup test completed!")
         return self.last_execution_dir
+
+    def _run_picture_resolution_test(self, selected_devices, existing_exec_dir=None):
+        """Run the Picture Resolution Setup test on selected devices in parallel."""
+        exec_id = existing_exec_dir.name if existing_exec_dir else datetime.now().strftime("Execution_%Y%m%d_%H%M%S")
+
+        print(f"\n🎨 Running Picture Resolution Setup test")
+        print(f"🆔 Execution ID: {exec_id}")
+
+        self._run_tests_parallel(
+            selected_devices, "test/test_picture_resolution.py",
+            exec_id, "Picture Resolution", "test_picture_resolution.log", "report_picture_resolution.html"
+        )
+
+        self.last_execution_dir = Path("TestResults") / exec_id
+        print("\n🎉 Picture Resolution Setup test completed!")
+        return self.last_execution_dir
     # ──────────────────────────────────────────────────────────────
     # Main Menu
     # ──────────────────────────────────────────────────────────────
@@ -427,6 +446,7 @@ class InteractiveTestRunner:
             print("  • Display Resolution Setup")
             print("  • Banner Configuration Setup")
             print("  • Sound Configuration Setup")
+            print("  • Picture Resolution Setup")
             print("\nSelect an option:")
             print("1. 🔌 Test Device Connectivity")
             print("2. 🔒 Run Parental Lock Setup Test")
@@ -436,10 +456,11 @@ class InteractiveTestRunner:
             print("6. 📺 Run Display Resolution Setup Test")
             print("7. 🎨 Run Banner Configuration Setup Test")
             print("8. 🎨 Run Sound Configuration Setup Test")
-            print("9. 🚀 Run All Tests")
-            print("10. 📅 Schedule Tests")
-            print("11. 📧 Email Report (Last Execution)")
-            print("12. ❌ Exit")
+            print("9. 🎨 Run Picture Resolution Setup Test")
+            print("10. 🚀 Run All Tests")
+            print("11. 📅 Schedule Tests")
+            print("12. 📧 Email Report (Last Execution)")
+            print("13. ❌ Exit")
 
             try:
                 choice = input("\nEnter your choice (1-12): ").strip()
@@ -541,13 +562,7 @@ class InteractiveTestRunner:
 
                 elif choice == '9':
                     selected_devices = self.select_devices()
-                    exec_dir = self._run_parental_lock_test(selected_devices)
-                    self._run_favourite_channels_test(selected_devices, exec_dir)
-                    self._run_remote_pairing_test(selected_devices, exec_dir)
-                    self._run_audio_change_test(selected_devices, exec_dir)
-                    self._run_display_resolution_test(selected_devices, exec_dir)
-                    self._run_banner_configuration_test(selected_devices, exec_dir)
-                    self._run_sound_configuration_test(selected_devices, exec_dir)
+                    self._run_picture_resolution_test(selected_devices)
 
                     if (self.last_execution_dir and self.email_sender
                             and self.email_sender.enabled):
@@ -559,14 +574,34 @@ class InteractiveTestRunner:
                     input("\nPress Enter to continue...")
 
                 elif choice == '10':
-                    self.schedule_tests_menu()
+                    selected_devices = self.select_devices()
+                    exec_dir = self._run_parental_lock_test(selected_devices)
+                    self._run_favourite_channels_test(selected_devices, exec_dir)
+                    self._run_remote_pairing_test(selected_devices, exec_dir)
+                    self._run_audio_change_test(selected_devices, exec_dir)
+                    self._run_display_resolution_test(selected_devices, exec_dir)
+                    self._run_banner_configuration_test(selected_devices, exec_dir)
+                    self._run_sound_configuration_test(selected_devices, exec_dir)
+                    self._run_picture_resolution_test(selected_devices, exec_dir)
+
+                    if (self.last_execution_dir and self.email_sender
+                            and self.email_sender.enabled):
+                        send_email = input(
+                            "\n📧 Send email report? (y/n): "
+                        ).strip().lower()
+                        if send_email == 'y':
+                            self.send_email_report()
                     input("\nPress Enter to continue...")
 
                 elif choice == '11':
-                    self.send_email_report()
+                    self.schedule_tests_menu()
                     input("\nPress Enter to continue...")
 
                 elif choice == '12':
+                    self.send_email_report()
+                    input("\nPress Enter to continue...")
+
+                elif choice == '13':
                     print("👋 Goodbye!")
                     if self.scheduler:
                         self.scheduler.stop_scheduler()

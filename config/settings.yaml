@@ -161,3 +161,20 @@ banner_configuration:
   xpaths:
     banner_menu: '//android.widget.CheckedTextView[@resource-id="tv.accedo.studio.paytv.tatasky:id/menu_item" and @text="Banner"]'
     next_value_arrow: '//android.widget.LinearLayout[@resource-id="tv.accedo.studio.paytv.tatasky:id/child_relative_layout"]/android.widget.ImageView[2]'
+
+  #Picture Resolution
+  Picture_Resolution:
+    app_package: "tv.accedo.studio.paytv.tatasky"
+    appium_url: "http://localhost:4723"
+    navigation:
+      up_presses: 1                      # presses UP from home to reach settings row
+      right_presses: 4                   # presses RIGHT to reach User Preferences
+    home_check:
+      logo_file: "Home.png"
+      region: [ 90, 120, 260, 180 ]
+      threshold: 0.60
+      max_attempts: 4
+    expected_user_prefs_title: "USER PREFERENCES"
+    ui_ids:
+      title: "tv.accedo.studio.paytv.tatasky:id/textViewTitle"
+      user_settings_btn: "tv.accedo.studio.paytv.tatasky:id/buttonUserSettings"

@@ -33,8 +33,6 @@ NAV_CFG = Audio_CFG.get("navigation", {})
 Audio_Nav=Audio_CFG.get("navigation_audio",{})
 HOME_CFG = Audio_CFG.get("home_check", {})
 UI_IDS = Audio_CFG.get("ui_ids", {})
-#MAX_RIGHT_SEARCH = FAV_CFG.get("max_right_favourites", 30)
-#CHANNELS_TO_FAVOURITE = FAV_CFG.get("channels_to_favourite", 0)  # 0 = favourite ALL
 
 
 class TestSoundConfigurationSetup:
