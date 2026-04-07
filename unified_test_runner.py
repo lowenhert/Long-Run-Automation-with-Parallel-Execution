@@ -228,17 +228,69 @@ class InteractiveTestRunner:
     # Test Modules
     # ──────────────────────────────────────────────────────────────
 
-    def _run_device_test(self, device_id, test_file, exec_id, test_name, log_filename, report_filename):
+    # Base Appium port — each device gets base + index to avoid conflicts
+    APPIUM_BASE_PORT = 4723
+
+    def _start_appium_server(self, port):
+        """Start a dedicated Appium server on the given port. Returns the process."""
+        cmd = ["appium", "--port", str(port), "--base-path", "/", "--log-level", "warn"]
+        try:
+            proc = subprocess.Popen(
+                cmd,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
+            )
+            # Wait until Appium is ready to accept connections
+            import socket
+            deadline = time.time() + 20
+            while time.time() < deadline:
+                try:
+                    with socket.create_connection(("localhost", port), timeout=1):
+                        break
+                except (ConnectionRefusedError, OSError):
+                    time.sleep(0.5)
+            else:
+                print(f"  ⚠️  Appium on port {port} did not start in 20s — proceeding anyway")
+            return proc
+        except FileNotFoundError:
+            print(f"  ⚠️  'appium' command not found — using existing server on port {port}")
+            return None
+
+    def _stop_appium_server(self, proc):
+        """Terminate an Appium server process started by _start_appium_server."""
+        if proc is None:
+            return
+        try:
+            proc.terminate()
+            proc.wait(timeout=10)
+        except Exception:
+            try:
+                proc.kill()
+            except Exception:
+                pass
+
+    def _run_device_test(self, device_id, test_file, exec_id, test_name, log_filename, report_filename, appium_port=None):
         """Run a single test on a single device. Returns (device_id, success, message)."""
         device_safe = device_id.replace(':', '_').replace('.', '_')
         exec_dir = Path("TestResults") / exec_id / f"device_{device_safe}"
         exec_dir.mkdir(parents=True, exist_ok=True)
+
+        # Start a dedicated Appium server for this device if a port is given
+        appium_proc = None
+        if appium_port is not None:
+            print(f"  [{device_id}] Starting Appium server on port {appium_port}…")
+            appium_proc = self._start_appium_server(appium_port)
+            appium_url = f"http://localhost:{appium_port}"
+        else:
+            appium_url = "http://localhost:4723"
 
         env = os.environ.copy()
         env["DEVICE_ID"] = device_id
         env["DEVICE_NAME"] = device_id
         env["TARGET_DEVICE"] = device_id
         env["EXECUTION_ID"] = exec_id
+        env["APPIUM_URL"] = appium_url
 
         cmd = [
             self.python_exe, "-m", "pytest",
@@ -251,7 +303,7 @@ class InteractiveTestRunner:
             f"--html={exec_dir}/{report_filename}",
             "--self-contained-html",
         ]
-        print(f"  [{device_id}] Running {test_name} test…")
+        print(f"  [{device_id}] Running {test_name} test (Appium: {appium_url})…")
         try:
             result = subprocess.run(
                 cmd, env=env, capture_output=True, text=True, timeout=30000
@@ -269,14 +321,22 @@ class InteractiveTestRunner:
         except Exception as e:
             print(f"  [{device_id}] ❌ {test_name} ERROR: {e}")
             return (device_id, False, str(e))
+        finally:
+            self._stop_appium_server(appium_proc)
 
     def _run_tests_parallel(self, selected_devices, test_file, exec_id, test_name, log_filename, report_filename):
-        """Run a test on multiple devices in parallel using ThreadPoolExecutor."""
+        """Run a test on multiple devices in parallel, each on its own Appium port."""
+        # Assign a dedicated port per device: 4723, 4724, 4725, ...
+        device_ports = {
+            device_id: self.APPIUM_BASE_PORT + idx
+            for idx, device_id in enumerate(selected_devices)
+        }
         with ThreadPoolExecutor(max_workers=len(selected_devices)) as executor:
             futures = {
                 executor.submit(
                     self._run_device_test, device_id, test_file,
-                    exec_id, test_name, log_filename, report_filename
+                    exec_id, test_name, log_filename, report_filename,
+                    device_ports[device_id]
                 ): device_id
                 for device_id in selected_devices
             }
