@@ -323,26 +323,71 @@ class TestDisplayResolutionSetup:
                          "PASSED", ss8)
 
             # ─────────────────────────────────────────────────────────
-            # STEP 9 — Select resolution container [2]
+            # STEP 9 — Select target resolution by text
             # ─────────────────────────────────────────────────────────
             current_step = 9
-            log.info("[STEP 9] Selecting resolution container [2]…")
-            resolution_container_xpath = XPATHS.get(
-                "resolution_container",
-                '(//android.widget.LinearLayout[@resource-id="com.technicolor.tv.settings.device.display:id/container"])[2]'
+            target_res = DR_CFG.get("target_resolution", "3840x2160p50")
+            log.info(f"[STEP 9] Selecting resolution '{target_res}'…")
+            resolution_text_xpath = (
+                f'//android.widget.TextView[@resource-id="android:id/title"'
+                f' and @text="{target_res}"]'
             )
-            if not self.ui.exists_by_xpath(resolution_container_xpath, timeout=8):
-                ss9 = self._take_step_screenshot(9, "resolution_container_not_found")
-                _record_step(9, "Select Resolution Container",
-                             "Resolution container [2] not found",
-                             "FAILED", ss9, "Resolution container [2] not found")
-                raise AssertionError("Resolution container [2] not found")
-            self.ui.click_by_xpath(resolution_container_xpath, timeout=8)
-            log.info("[STEP 9] ✓ Selected resolution container [2]")
+            if not self.ui.exists_by_xpath(resolution_text_xpath, timeout=8):
+                ss9 = self._take_step_screenshot(9, "resolution_text_not_found")
+                _record_step(9, "Select Target Resolution",
+                             f"Resolution '{target_res}' not found on screen",
+                             "FAILED", ss9, f"Resolution '{target_res}' not found")
+                raise AssertionError(f"Resolution '{target_res}' not found on screen")
+
+            # Check if this resolution is already the active one (checked)
+            res_el = self.ui.find_by_xpath(resolution_text_xpath, timeout=3)
+            try:
+                # Walk up to the parent container and check the checkmark/checked state
+                checked_xpath = (
+                    f'//android.widget.TextView[@resource-id="android:id/title"'
+                    f' and @text="{target_res}"]'
+                    f'/ancestor::android.widget.LinearLayout[1]'
+                    f'//android.widget.ImageView[@resource-id="android:id/icon"]'
+                )
+                already_selected = self.ui.exists_by_xpath(checked_xpath, timeout=2)
+            except Exception:
+                already_selected = False
+
+            if already_selected:
+                log.warning(f"[STEP 9] Resolution '{target_res}' is already the active resolution!")
+                ss9 = self._take_step_screenshot(9, "same_resolution_selected")
+                _record_step(9, "Select Target Resolution",
+                             f"Resolution '{target_res}' is already selected — same resolution, no change needed",
+                             "FAILED", ss9,
+                             f"Same resolution '{target_res}' is already active")
+
+                # Press BACK until home screen
+                log.info("[STEP 9] Pressing BACK to return to home screen…")
+                max_back = 10
+                for back_attempt in range(1, max_back + 1):
+                    self.device.back()
+                    time.sleep(1)
+                    try:
+                        screenshot_bytes = self.device.take_screenshot_bytes()
+                        self.logo_compare.fail_if_logo_not_present_bytes(
+                            screenshot_bytes, str(home_logo_path),
+                            x=hc_region[0], y=hc_region[1],
+                            width=hc_region[2], height=hc_region[3],
+                            threshold=hc_threshold,
+                        )
+                        log.info(f"[STEP 9] Home screen reached after {back_attempt} BACK press(es)")
+                        break
+                    except (AssertionError, Exception):
+                        pass
+
+                raise AssertionError(f"Same resolution '{target_res}' is already active — no change made")
+
+            self.ui.click_by_xpath(resolution_text_xpath, timeout=8)
+            log.info(f"[STEP 9] ✓ Clicked resolution '{target_res}'")
             time.sleep(2)
-            ss9 = self._take_step_screenshot(9, "resolution_container_selected")
-            _record_step(9, "Select Resolution Container",
-                         "Clicked resolution container [2] to select the resolution option",
+            ss9 = self._take_step_screenshot(9, "resolution_selected")
+            _record_step(9, "Select Target Resolution",
+                         f"Clicked resolution '{target_res}' from the list",
                          "PASSED", ss9)
 
             # ─────────────────────────────────────────────────────────
@@ -359,6 +404,26 @@ class TestDisplayResolutionSetup:
                 _record_step(10, "Confirm Resolution Selection",
                              "Confirm button (guidedactions_list LinearLayout[2]) not found",
                              "FAILED", ss10, "Resolution confirm button not found")
+
+                # Press BACK until home screen
+                log.info("[STEP 10] Confirm not found — pressing BACK to return home…")
+                max_back = 10
+                for back_attempt in range(1, max_back + 1):
+                    self.device.back()
+                    time.sleep(1)
+                    try:
+                        screenshot_bytes = self.device.take_screenshot_bytes()
+                        self.logo_compare.fail_if_logo_not_present_bytes(
+                            screenshot_bytes, str(home_logo_path),
+                            x=hc_region[0], y=hc_region[1],
+                            width=hc_region[2], height=hc_region[3],
+                            threshold=hc_threshold,
+                        )
+                        log.info(f"[STEP 10] Home screen reached after {back_attempt} BACK press(es)")
+                        break
+                    except (AssertionError, Exception):
+                        pass
+
                 raise AssertionError("Resolution confirm button not found in guided actions")
             self.ui.click_by_xpath(confirm_xpath, timeout=8)
             log.info("[STEP 10] ✓ Confirmed resolution selection")

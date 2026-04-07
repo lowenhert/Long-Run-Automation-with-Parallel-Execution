@@ -20,9 +20,9 @@ parental_lock:
     channel_lock_menu_item: "menu_item"
     channel_row: "android:id/content"
     checkbox: "cb"
-    channel_name: "textViewChannelName"
-    channel_number: "textViewChannelNumber"
-  max_down_search: 30                  # max DOWN presses to find Parental Controls
+    channel_name: "channelName"
+    channel_number: "channelNumber"
+  max_down_search: 50                  # max DOWN presses to find Parental Controls
   max_right_search: 10                 # max RIGHT presses to find Channel Lock tab
   max_no_new_scrolls: 3               # stop scrolling after N scrolls with no new channels
   max_scroll_iterations: 30            # absolute cap on total scroll iterations
@@ -122,6 +122,7 @@ display_resolution:
     region: [90, 120, 260, 180]        # x, y, width, height
     threshold: 0.60
     max_attempts: 4
+  target_resolution: "3840x2160p50"    # resolution text to select (change this to any available option)
   reboot_wait_seconds: 60              # seconds to wait for device reboot after resolution change
   max_home_presses: 15                 # max HOME presses to detect home after reboot
   display_down_presses: 11             # DOWN presses from Device Preferences to reach Display

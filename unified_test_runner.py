@@ -233,7 +233,15 @@ class InteractiveTestRunner:
 
     def _start_appium_server(self, port):
         """Start a dedicated Appium server on the given port. Returns the process."""
-        cmd = ["appium", "--port", str(port), "--base-path", "/", "--log-level", "warn"]
+        # On Windows, appium is installed as a .cmd — need shell=True to resolve it
+        appium_cmd = "appium"
+        if os.name == "nt":
+            # Use the .cmd wrapper so subprocess can find it without shell=True
+            import shutil as _sh
+            found = _sh.which("appium") or _sh.which("appium.cmd")
+            if found:
+                appium_cmd = found
+        cmd = [appium_cmd, "--port", str(port), "--base-path", "/", "--log-level", "warn"]
         try:
             proc = subprocess.Popen(
                 cmd,
