@@ -105,6 +105,7 @@ class InteractiveTestRunner:
             self._run_sound_configuration_test(self.devices, exec_dir)
             self._run_picture_resolution_test(self.devices, exec_dir)
             self._run_set_reminders_test(self.devices, exec_dir)
+            self._run_lnb_settings_test(self.devices, exec_dir)
             return exec_dir
         except Exception as e:
             print(f"❌ Error in scheduled test execution: {e}")
@@ -152,7 +153,8 @@ class InteractiveTestRunner:
             "test/test_display_resolution_setup.py",
             "test/test_sound_configuration.py",
             "test/test_picture_resolution.py",
-            "test/test_set_reminder.py"
+            "test/test_set_reminder.py",
+            "test/test_lnb_settings.py"
         ]
 
         for fp in required_files:
@@ -513,6 +515,23 @@ class InteractiveTestRunner:
         self.last_execution_dir = Path("TestResults") / exec_id
         print("\n🎉 Set Reminder Setup test completed!")
         return self.last_execution_dir
+
+    def _run_lnb_settings_test(self, selected_devices, existing_exec_dir=None):
+        """Run the LNB Settings Setup test on selected devices in parallel."""
+        exec_id = existing_exec_dir.name if existing_exec_dir else datetime.now().strftime("Execution_%Y%m%d_%H%M%S")
+
+        print(f"\n📡 Running LNB Settings Setup test")
+        print(f"🆔 Execution ID: {exec_id}")
+
+        self._run_tests_parallel(
+            selected_devices, "test/test_lnb_settings.py",
+            exec_id, "LNB Settings", "test_lnb_settings.log", "report_lnb_settings.html"
+        )
+
+        self.last_execution_dir = Path("TestResults") / exec_id
+        print("\n🎉 LNB Settings Setup test completed!")
+        return self.last_execution_dir
+
     # ──────────────────────────────────────────────────────────────
     # Main Menu
     # ──────────────────────────────────────────────────────────────
@@ -534,6 +553,7 @@ class InteractiveTestRunner:
             print("  • Sound Configuration Setup")
             print("  • Picture Resolution Setup")
             print("  • Set Reminder Setup")
+            print("  • LNB Settings Setup")
             print("\nSelect an option:")
             print("1. 🔌 Test Device Connectivity")
             print("2. 🔒 Run Parental Lock Setup Test")
@@ -545,13 +565,14 @@ class InteractiveTestRunner:
             print("8. 🎨 Run Sound Configuration Setup Test")
             print("9. 🎨 Run Picture Resolution Setup Test")
             print("10. 🎨 Run Set Reminder Setup Test")
-            print("11. 🚀 Run All Tests")
-            print("12. 📅 Schedule Tests")
-            print("13. 📧 Email Report (Last Execution)")
-            print("14. ❌ Exit")
+            print("11. 📡 Run LNB Settings Setup Test")
+            print("12. 🚀 Run All Tests")
+            print("13. 📅 Schedule Tests")
+            print("14. 📧 Email Report (Last Execution)")
+            print("15. ❌ Exit")
 
             try:
-                choice = input("\nEnter your choice (1-12): ").strip()
+                choice = input("\nEnter your choice (1-15): ").strip()
 
                 if choice == '1':
                     self.test_connectivity()
@@ -676,15 +697,7 @@ class InteractiveTestRunner:
 
                 elif choice == '11':
                     selected_devices = self.select_devices()
-                    exec_dir = self._run_parental_lock_test(selected_devices)
-                    self._run_favourite_channels_test(selected_devices, exec_dir)
-                    self._run_remote_pairing_test(selected_devices, exec_dir)
-                    self._run_audio_change_test(selected_devices, exec_dir)
-                    self._run_display_resolution_test(selected_devices, exec_dir)
-                    self._run_banner_configuration_test(selected_devices, exec_dir)
-                    self._run_sound_configuration_test(selected_devices, exec_dir)
-                    self._run_picture_resolution_test(selected_devices, exec_dir)
-                    self._run_set_reminders_test(selected_devices, exec_dir)
+                    self._run_lnb_settings_test(selected_devices)
 
                     if (self.last_execution_dir and self.email_sender
                             and self.email_sender.enabled):
@@ -696,21 +709,43 @@ class InteractiveTestRunner:
                     input("\nPress Enter to continue...")
 
                 elif choice == '12':
-                    self.schedule_tests_menu()
+                    selected_devices = self.select_devices()
+                    exec_dir = self._run_parental_lock_test(selected_devices)
+                    self._run_favourite_channels_test(selected_devices, exec_dir)
+                    self._run_remote_pairing_test(selected_devices, exec_dir)
+                    self._run_audio_change_test(selected_devices, exec_dir)
+                    self._run_display_resolution_test(selected_devices, exec_dir)
+                    self._run_banner_configuration_test(selected_devices, exec_dir)
+                    self._run_sound_configuration_test(selected_devices, exec_dir)
+                    self._run_picture_resolution_test(selected_devices, exec_dir)
+                    self._run_set_reminders_test(selected_devices, exec_dir)
+                    self._run_lnb_settings_test(selected_devices, exec_dir)
+
+                    if (self.last_execution_dir and self.email_sender
+                            and self.email_sender.enabled):
+                        send_email = input(
+                            "\n📧 Send email report? (y/n): "
+                        ).strip().lower()
+                        if send_email == 'y':
+                            self.send_email_report()
                     input("\nPress Enter to continue...")
 
                 elif choice == '13':
-                    self.send_email_report()
+                    self.schedule_tests_menu()
                     input("\nPress Enter to continue...")
 
                 elif choice == '14':
+                    self.send_email_report()
+                    input("\nPress Enter to continue...")
+
+                elif choice == '15':
                     print("👋 Goodbye!")
                     if self.scheduler:
                         self.scheduler.stop_scheduler()
                     sys.exit(0)
 
                 else:
-                    print("❌ Invalid choice. Please select 1-11.")
+                    print("❌ Invalid choice. Please select 1-15.")
 
             except KeyboardInterrupt:
                 print("\n\n👋 Goodbye!")

@@ -11,6 +11,7 @@ from core.report_manager import ReportGenerator
 from libraries.DeviceController import DeviceController
 from libraries.appium_utils import AppiumDriver, AppiumHelper
 from libraries.LogoCompareLibrary import LogoCompareLibrary
+from libraries.navigation_cleanup import navigate_back_until_home
 
 # ─── Logger setup ────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -78,8 +79,23 @@ class TestPictureResolutionSetup:
         self._cleanup()
 
     def _cleanup(self):
-        """Close Appium session (no home press — device may be rebooting)"""
-        log.info("CLEANUP — closing Appium session")
+        """Navigate back/home and close Appium session"""
+        log.info("CLEANUP — navigating back/home")
+        try:
+            home_logo_path = LOGO_DIR / HOME_CFG.get("logo_file", "Home.png")
+            navigate_back_until_home(
+                device=self.device,
+                logo_compare=self.logo_compare,
+                home_logo_path=home_logo_path,
+                home_region=HOME_CFG.get("region", [90, 120, 260, 180]),
+                home_threshold=HOME_CFG.get("threshold", 0.60),
+                max_back_presses=HOME_CFG.get("max_back_presses", 10),
+                max_home_presses=HOME_CFG.get("max_home_presses", 4),
+                settle_seconds=HOME_CFG.get("cleanup_settle_seconds", 1.0),
+                logger=log,
+            )
+        except Exception as e:
+            log.error(f"CLEANUP navigation failed: {e}")
         try:
             AppiumDriver.quit(self.driver)
         except Exception as e:

@@ -96,7 +96,36 @@ Audio :
     user_settings_btn: "buttonUserSettings"
     Apply_btn: "tv.accedo.studio.paytv.tatasky:id/applyVideoSettings"
 
-
+# LNB Settings Configuration
+lnb_settings:
+  app_package: "tv.accedo.studio.paytv.tatasky"
+  appium_url: "http://localhost:4723"
+  navigation:
+    up_presses: 1
+    right_presses: 4
+  home_check:
+    logo_file: "Home.png"
+    region: [90, 120, 260, 180]
+    threshold: 0.60
+    max_attempts: 4
+  lnb_type: "Super LNB"
+  frequency: "11.510"
+  polarization: "HORIZONTAL"
+  symbol_rate: "32.720"
+  ui_ids:
+    title: "textViewTitle"
+    system_settings_btn: "buttonSystemSettings"
+    launch_satellite_settings: "launchSatelliteSettings"
+    text_view: "textView"
+    next_button: "next_button"
+    editable: "editable"
+    select_button: "select_button"
+    continue_button: "continue_button"
+    signal_strength: "signal_test_signal_strength"
+  signal_check_channel: "455"
+  signal_strength_min: 10
+  
+  max_click_attempts: 20
 
 # Email Configuration (Gmail SMTP)
 email:
