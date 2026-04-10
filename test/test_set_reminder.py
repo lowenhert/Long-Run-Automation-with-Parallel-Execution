@@ -38,11 +38,9 @@ class TestSetReminderSetup:
 
     @pytest.fixture(scope="function", autouse=True)
     def setup(self, request):
-        """Setup test environment with ADB device + Appium session"""
         log.info("=" * 60)
         log.info("SETUP — Set Reminder test initialisation")
 
-        # ── Resolve device ID ────────────────────────────────────────
         self.device_id = (
             os.getenv("DEVICE_ID")
             or os.getenv("DEVICE_NAME")
@@ -54,13 +52,9 @@ class TestSetReminderSetup:
 
         log.info(f"Using device: {self.device_id}")
 
-        # ── ADB device controller (for key events) ──────────────────
         self.device = DeviceController(self.device_id)
-
-        # ── Logo compare (for home screen check) ────────────────────
         self.logo_compare = LogoCompareLibrary()
 
-        # ── Appium session (for UI element interaction) ──────────────
         appium_url = os.getenv("APPIUM_URL", PL_CFG.get("appium_url", "http://localhost:4723"))
         self.driver = AppiumDriver.create(
             device_id=self.device_id,
@@ -70,7 +64,6 @@ class TestSetReminderSetup:
         self.ui = AppiumHelper(self.driver, default_timeout=10)
         log.info("Appium session created")
 
-        # ── Report generator ─────────────────────────────────────────
         self.report_gen = ReportGenerator(request.node.execution_dir)
         self.screenshots_folder = request.node.screenshot_dir
 
@@ -79,7 +72,6 @@ class TestSetReminderSetup:
         self._cleanup()
 
     def _cleanup(self):
-        """Navigate home and close Appium session"""
         log.info("CLEANUP — navigating home")
         try:
             self.device.home()
@@ -92,8 +84,8 @@ class TestSetReminderSetup:
             log.error(f"CLEANUP quit() failed: {e}")
         log.info("CLEANUP complete")
 
+
     def _save_reminders_to_report(self, reminders):
-        """Add reminders as a sheet in the main report Excel."""
         try:
             self.report_gen.reminders_sheet(reminders)
             log.info(f"[EXCEL] reminders list sheet added to report ({len(reminders)} reminders)")
@@ -113,14 +105,43 @@ class TestSetReminderSetup:
             return None
         return str(save_path)
 
-    # ══════════════════════════════════════════════════════════════════
-    #  MAIN TEST
-    # ══════════════════════════════════════════════════════════════════
+
+    def _dismiss_reminder_banner(self):
+        """Dismiss reminder banner using DPAD SELECT. Returns True if banner was present and dismissed."""
+        dismiss_id = 'tv.accedo.studio.paytv.tatasky:id/dismissButton'
+        dismissed = False
+        max_attempts = 5
+
+        log.info("[BANNER CHECK] Checking for reminder banner...")
+
+        for i in range(max_attempts):
+            if self.ui.exists_by_id(dismiss_id, timeout=3):
+                log.info(f"[BANNER] Reminder banner detected (attempt {i+1}) → Dismissing with SELECT")
+                log.info("Navigating right")
+                self.device.navigate_right()
+                time.sleep(1)
+                self.device.navigate_right()
+                time.sleep(1)
+                log.info("Pressing select")
+                self.device.select()
+                time.sleep(2.0)
+                dismissed = True
+            else:
+                break
+
+        if dismissed:
+            log.info("[BANNER] Banner dismissed successfully. Stabilizing screen...")
+            time.sleep(2.5)
+
+        return dismissed
+
+
 
     def test_set_reminders(self, request):
         """
         Set Reminder Setup — navigate to guide, set reminders on future events.
-        If SNS appears while setting any reminder → retry the entire test from Step 1.
+        Banner at start is dismissed and test continues.
+        Only SNS during reminder setting triggers full retry.
         """
         reminders = []
         step_results = []
@@ -129,11 +150,8 @@ class TestSetReminderSetup:
         error_message = ""
         current_step = 0
 
-        # Common IDs
-        dismiss_id = 'tv.accedo.studio.paytv.tatasky:id/dismissButton'
         SNS_id = 'tv.accedo.studio.paytv.tatasky:id/infobar_base_layout'
 
-        # Home screen config
         home_logo_path = LOGO_DIR / HOME_CFG.get("logo_file", "Home.png")
         hc_region = HOME_CFG.get("region", [90, 120, 260, 180])
         hc_threshold = HOME_CFG.get("threshold", 0.60)
@@ -149,23 +167,27 @@ class TestSetReminderSetup:
                 "error_message": err,
             })
 
-        MAX_RETRIES = 3
+        MAX_RETRIES = 5
 
         for retry in range(MAX_RETRIES):
             try:
-                log.info(f"\n{'='*70}")
+                log.info(f"\n{'='*80}")
                 log.info(f"[RETRY {retry+1}/{MAX_RETRIES}] Starting Set Reminders Test")
+
                 reminders.clear()
                 step_results.clear()
-                count = 0   # Number of successfully set reminders
+                count = 0
 
-                # ─────────────────────────────────────────────────────────
-                # STEP 1 — Verify Home Screen
-                # ─────────────────────────────────────────────────────────
+                # ================================================
+                # STEP 1 — Home Screen + Banner Dismiss
+                # ================================================
                 current_step = 1
                 log.info("[STEP 1] Checking home screen…")
-                home_detected = False
 
+                # Dismiss banner if present — BUT DO NOT RAISE
+                self._dismiss_reminder_banner()
+
+                home_detected = False
                 for attempt in range(1, hc_max + 1):
                     screenshot_bytes = self.device.take_screenshot_bytes()
                     try:
@@ -179,11 +201,12 @@ class TestSetReminderSetup:
                         home_detected = True
                         break
                     except AssertionError:
-                        log.warning(f"[STEP 1] Home not detected (attempt {attempt}), pressing HOME")
+                        log.warning(f"[STEP 1] Home not detected, pressing HOME")
                         self.device.home()
-                        time.sleep(2)
+                        time.sleep(2.5)
 
                 ss1 = self._take_step_screenshot(1, "home_screen")
+
                 if not home_detected:
                     _record_step(1, "Verify Home Screen",
                                  f"Home logo not detected after {hc_max} attempts", "FAILED", ss1)
@@ -192,33 +215,34 @@ class TestSetReminderSetup:
                 _record_step(1, "Verify Home Screen",
                              "Home screen confirmed via logo", "PASSED", ss1)
 
-                # ─────────────────────────────────────────────────────────
-                # STEP 2 — Navigate to TV Channels
-                # ─────────────────────────────────────────────────────────
+                # ================================================
+                # STEP 2 — TV Channels
+                # ================================================
                 current_step = 2
                 TV = '//android.widget.CheckedTextView[@resource-id="tv.accedo.studio.paytv.tatasky:id/menu_item" and @text="TV Channels"]'
                 log.info("[STEP 2] Navigating to TV Channels")
+
+                self._dismiss_reminder_banner()
 
                 if self.ui.exists_by_xpath(TV):
                     self.ui.click_by_xpath(TV)
                     ss2 = self._take_step_screenshot(2, "TV_Channels_nav")
                     _record_step(2, "Navigate to TV Channels", "TV Channels tab selected", "PASSED", ss2)
                 else:
-                    if self.ui.exists_by_id(dismiss_id):
-                        self.ui.click_by_id(dismiss_id)
-                        raise Exception("Previous Reminder banner detected")
                     ss2 = self._take_step_screenshot(2, "TV_Channels_failed")
                     _record_step(2, "Navigate to TV Channels", "TV Channels tab not found", "FAILED", ss2)
                     raise AssertionError("TV Channels tab not found")
 
                 time.sleep(3)
 
-                # ─────────────────────────────────────────────────────────
+                # ================================================
                 # STEP 3 — Launch Guide
-                # ─────────────────────────────────────────────────────────
+                # ================================================
                 current_step = 3
                 guide_xpath = '//android.widget.CheckedTextView[@resource-id="tv.accedo.studio.paytv.tatasky:id/menu_item" and @text="Guide"]'
                 log.info("[STEP 3] Launching Guide")
+
+                self._dismiss_reminder_banner()
 
                 if self.ui.exists_by_xpath(guide_xpath):
                     self.ui.click_by_xpath(guide_xpath)
@@ -226,25 +250,20 @@ class TestSetReminderSetup:
                     ss3 = self._take_step_screenshot(3, "Guide_launched")
                     _record_step(3, "Launch Guide", "Guide launched successfully", "PASSED", ss3)
                 else:
-                    if self.ui.exists_by_id(dismiss_id):
-                        self.ui.click_by_id(dismiss_id)
-                        raise Exception("Previous Reminder banner detected")
                     ss3 = self._take_step_screenshot(3, "Guide_failed")
                     _record_step(3, "Launch Guide", "Guide not found", "FAILED", ss3)
                     raise AssertionError("Guide not launched")
 
-                # ─────────────────────────────────────────────────────────
-                # STEP 4 — Launch All Channels Guide
-                # ─────────────────────────────────────────────────────────
+                # ================================================
+                # STEP 4 — All Channels Guide
+                # ================================================
                 current_step = 4
+                self._dismiss_reminder_banner()
+
                 log.info("[STEP 4] Launching All Channels Guide")
                 self.device.select()
                 self.device.select()
                 time.sleep(3)
-
-                if self.ui.exists_by_id(dismiss_id):
-                    self.ui.click_by_id(dismiss_id)
-                    raise Exception("Previous Reminder banner detected")
 
                 Filter_xpath = '//android.widget.TextView[@resource-id="tv.accedo.studio.paytv.tatasky:id/textViewFilter"]'
                 title_text = self.ui.get_text_by_xpath(Filter_xpath, timeout=10)
@@ -257,9 +276,9 @@ class TestSetReminderSetup:
                 ss4 = self._take_step_screenshot(4, "AllChannels_found")
                 _record_step(4, "Launch All Channels Guide", "All Channels Guide launched", "PASSED", ss4)
 
-                # ─────────────────────────────────────────────────────────
-                # STEP 5 — Set 6 Reminders (SNS will trigger full retry)
-                # ─────────────────────────────────────────────────────────
+                # ================================================
+                # STEP 5 — Set 6 Reminders (Only here SNS triggers retry)
+                # ================================================
                 current_step = 5
                 log.info("[STEP 5] Starting to set 6 reminders...")
 
@@ -269,45 +288,52 @@ class TestSetReminderSetup:
                 name_id = 'tv.accedo.studio.paytv.tatasky:id/textViewTitle'
                 channel_number_id = 'tv.accedo.studio.paytv.tatasky:id/textViewDescriptionHeader'
                 Time_ID = 'tv.accedo.studio.paytv.tatasky:id/textViewStartEndTime'
+                No_info_error='tv.accedo.studio.paytv.tatasky:id/title'
 
                 while count < 6:
-                    # Check for reminder banner
-                    if self.ui.exists_by_id(dismiss_id):
-                        self.ui.click_by_id(dismiss_id)
-                        raise Exception("Previous Reminder banner detected")
+                    self._dismiss_reminder_banner()
 
                     max_downs = random.randint(5, 15)
-                    max_right = random.randint(1, 2)
+                    max_right = random.randint(2, 6)
 
+
+                    log.info(f"Navigating down {max_downs}")
                     self.device.navigate_down(max_downs)
+                    log.info(f"Navigating right {max_right}")
                     self.device.navigate_right(max_right)
-                    time.sleep(1.5)
+                    time.sleep(2)
 
                     EPG_text = self.ui.get_text_by_xpath(Highlighted_EPG, timeout=8)
 
-                    # Only proceed if we have valid event and no reminder already set
                     if EPG_text == "No information" or self.ui.exists_by_xpath(reminder_icon_xpath, timeout=2):
+                        log.info("Found No Information or existing reminder")
                         self.device.left(max_right)
                         continue
 
                     log.info(f"[STEP 5] Attempting to set reminder {count + 1}/6")
 
+
                     self.device.select()
+
+                    if  self.ui.exists_by_id(No_info_error,timeout=4):
+                        No_info_error_text = self.ui.get_text_by_id(No_info_error, timeout=8)
+                        if No_info_error_text in "Program information is not available. Please try after sometime." :
+                            log.info("No information found")
+                            time.sleep(2)
+                            continue
+
+
                     time.sleep(2.5)
 
-                    # ================== CRITICAL SNS CHECK ==================
+                    # ================== ONLY SNS TRIGGERS FULL RETRY ==================
                     if self.ui.exists_by_id(SNS_id, timeout=4):
                         log.warning("[SNS DETECTED] While setting reminder → Retrying entire test from Step 1")
                         self.device.home()
                         time.sleep(2)
                         raise Exception("SNS_INTERRUPT_RETRY_ALL")
 
-                    # Check banner again
-                    if self.ui.exists_by_id(dismiss_id):
-                        self.ui.click_by_id(dismiss_id)
-                        raise Exception("Previous Reminder banner detected")
+                    self._dismiss_reminder_banner()
 
-                    # Set Reminder
                     if self.ui.exists_by_xpath(Set_reminder_xpath, timeout=5):
                         self.ui.click_by_xpath(Set_reminder_xpath)
                         log.info(f"[STEP 5] ✓ Reminder {count + 1} set successfully")
@@ -327,17 +353,16 @@ class TestSetReminderSetup:
                         time.sleep(1.5)
                         self.device.left(max_right)
                     else:
-                        self.device.back()   # close any unexpected popup
+                        self.device.back()
+                        self.device.left(max_right)
                         time.sleep(1)
 
-                # Success - 6 reminders set
+                # Success
                 ss5 = self._take_step_screenshot(5, "set_reminders_success")
                 _record_step(5, "Set 6 Reminders",
                              f"Successfully set {len(reminders)} reminders", "PASSED", ss5)
 
-                # ─────────────────────────────────────────────────────────
-                # STEP 6 — Press HOME
-                # ─────────────────────────────────────────────────────────
+                # STEP 6 — Home
                 current_step = 6
                 log.info("[STEP 6] Pressing HOME")
                 self.device.home()
@@ -346,17 +371,16 @@ class TestSetReminderSetup:
                 _record_step(6, "Press HOME", "Returned to home screen", "PASSED", ss6)
 
                 log.info("TEST PASSED — 6 Reminders set successfully")
-                break  # Exit retry loop
+                break
 
             except Exception as e:
                 if "SNS_INTERRUPT_RETRY_ALL" in str(e):
-                    log.info(f"SNS detected - Retrying from beginning (attempt {retry+1})")
+                    log.info(f"[RETRY] SNS detected - Retrying whole test (attempt {retry+1})")
                     if retry == MAX_RETRIES - 1:
                         status = "FAILED"
                         error_message = "SNS kept appearing even after maximum retries"
                     continue
                 else:
-                    # Other failures
                     status = "FAILED"
                     error_message = str(e)
                     log.error(f"Test failed at step {current_step}: {e}", exc_info=True)
@@ -365,16 +389,11 @@ class TestSetReminderSetup:
         # ===================== FINAL REPORTING =====================
         self._save_reminders_to_report(reminders)
 
-        # Mark unexecuted steps as SKIPPED if failed
         if status == "FAILED":
             recorded = {s["step_number"] for s in step_results}
             all_step_names = {
-                1: "Verify Home Screen",
-                2: "Navigate to TV Channels",
-                3: "Launch Guide",
-                4: "Launch All Channels Guide",
-                5: "Set Reminders",
-                6: "Press HOME",
+                1: "Verify Home Screen", 2: "Navigate to TV Channels", 3: "Launch Guide",
+                4: "Launch All Channels Guide", 5: "Set Reminders", 6: "Press HOME"
             }
             for sn, sname in all_step_names.items():
                 if sn not in recorded:
@@ -388,7 +407,7 @@ class TestSetReminderSetup:
         )
 
         log.info(f"[RESULT] Status = {status} | Reminders Set = {len(reminders)}")
-        log.info("=" * 70)
+        log.info("=" * 80)
 
         if status == "FAILED":
             pytest.fail(error_message)
