@@ -30,9 +30,10 @@ class DeviceController:
         """Navigate upwards"""
         success, _, _ = self._run_adb_command(["shell", "input", "keyevent", "KEYCODE_DPAD_UP"])
 
-    def left(self):
+    def left(self,count=1):
         """Navigate to left"""
-        success, _, _ = self._run_adb_command(["shell", "input", "keyevent", "KEYCODE_DPAD_LEFT"])
+        for _ in range(count):
+            success, _, _ = self._run_adb_command(["shell", "input", "keyevent", "KEYCODE_DPAD_LEFT"])
 
 
     def back(self):

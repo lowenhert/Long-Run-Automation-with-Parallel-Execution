@@ -277,6 +277,54 @@ class ReportGenerator:
 
         wb.save(self.excel_path)
 
+    def reminders_sheet(self, reminders):
+        """
+        Add a 'Set Reminders' sheet to the report workbook.
+
+        Parameters
+        ----------
+        reminders : list[dict]
+            Each dict: {"event_name": str, "channel_description": str, "Time": str}
+        """
+        wb = load_workbook(self.excel_path)
+
+        sheet_title = "Set Reminders List"
+        if sheet_title in wb.sheetnames:
+            del wb[sheet_title]
+        ws = wb.create_sheet(title=sheet_title)
+
+        header_fill = PatternFill(start_color="00008B", end_color="00008B",
+                                  fill_type="solid")
+        header_font = Font(color="FFFFFF", bold=True, size=11)
+        thin_border = Border(
+            left=Side(style='thin'), right=Side(style='thin'),
+            top=Side(style='thin'), bottom=Side(style='thin'),
+        )
+        center_align = Alignment(horizontal="center", vertical="center")
+        pass_fill = PatternFill(start_color="C6EFCE", end_color="C6EFCE",
+                                fill_type="solid")
+
+        headers = ["S.No", "Event Name", "Channel Description", "Time"]
+        col_widths = [8, 30, 50, 20]
+        for col_idx, (hdr, w) in enumerate(zip(headers, col_widths), 1):
+            cell = ws.cell(row=1, column=col_idx, value=hdr)
+            cell.fill = header_fill
+            cell.font = header_font
+            cell.alignment = center_align
+            cell.border = thin_border
+            ws.column_dimensions[get_column_letter(col_idx)].width = w
+
+        for i, ch in enumerate(reminders, start=1):
+            row = i + 1
+            ws.cell(row=row, column=1, value=i).alignment = center_align
+            ws.cell(row=row, column=1).border = thin_border
+            ws.cell(row=row, column=2, value=ch.get("event_name", "")).border = thin_border
+            ws.cell(row=row, column=3, value=ch.get("channel_description", "")).border = thin_border
+            ws.cell(row=row, column=4, value=ch.get("Time", "")).border = thin_border
+
+
+        wb.save(self.excel_path)
+
     @staticmethod
     def merge_device_reports(execution_root_dir):
         """
