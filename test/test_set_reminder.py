@@ -289,8 +289,8 @@ class TestSetReminderSetup:
                 channel_number_id = 'tv.accedo.studio.paytv.tatasky:id/textViewDescriptionHeader'
                 Time_ID = 'tv.accedo.studio.paytv.tatasky:id/textViewStartEndTime'
                 No_info_error='tv.accedo.studio.paytv.tatasky:id/title'
-
-                while count < 6:
+                flag=0
+                while count < 6 and flag<50:
                     self._dismiss_reminder_banner()
 
                     max_downs = random.randint(5, 15)
@@ -307,6 +307,9 @@ class TestSetReminderSetup:
 
                     if EPG_text == "No information" or self.ui.exists_by_xpath(reminder_icon_xpath, timeout=4):
                         log.info("Found No Information or existing reminder")
+                        flag=flag+1
+                        if flag==49:
+                            log.warning("EPG not available")
                         self.device.left(max_right)
                         continue
 
