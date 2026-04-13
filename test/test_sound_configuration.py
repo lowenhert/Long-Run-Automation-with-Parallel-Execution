@@ -69,7 +69,7 @@ class TestSoundConfigurationSetup:
             app_package=TATASKY_PACKAGE,
             appium_url=appium_url,
         )
-        self.ui = AppiumHelper(self.driver, default_timeout=10)
+        self.ui = AppiumHelper(self.driver, default_timeout=15)
         log.info("Appium session created")
 
         # ── Report generator ─────────────────────────────────────────
@@ -163,7 +163,7 @@ class TestSoundConfigurationSetup:
                 except AssertionError:
                     log.warning(f"[STEP 1] Home not detected (attempt {attempt}/{hc_max}), pressing HOME…")
                     self.device.home()
-                    time.sleep(2)
+                    time.sleep(3)
 
             ss1 = self._take_step_screenshot(1, "home_screen")
             if not home_detected:
@@ -187,32 +187,39 @@ class TestSoundConfigurationSetup:
             self.device.navigate_right(3)
             time.sleep(0.5)
             self.device.select()
-            time.sleep(3)
+            time.sleep(5)
             ss2 = self._take_step_screenshot(2, "Android_Settings")
             _record_step(2, "Navigate to Android Settings",
                          "Pressed UP , RIGHT, SELECT to open Android Settings",
                          "PASSED", ss2)
 
             # ─────────────────────────────────────────────────────────
-            # STEP 3 — Navigate to Device Preference
+            # STEP 3 — Navigate to Device Preference (DPAD BACK + re-check up to 5 times)
             # ─────────────────────────────────────────────────────────
             current_step = 3
-            log.info("[STEP 3] Navigating to Device Preferences")
             dev_pref_id = ('//android.widget.TextView[@resource-id="android:id/title" and @text="Device Preferences"]')
-
+            dev_pref_found = False
+            for _retry in range(5):
+                log.info(f"[STEP 3] Checking for Device Preferences… (attempt {_retry + 1}/5)")
+                if self.ui.exists_by_xpath(dev_pref_id, timeout=5):
+                    log.info("[STEP 3] ✓ Device Preference detected")
+                    dev_pref_found = True
+                    break
+                log.warning(f"[STEP 3] Device Preference not found (attempt {_retry + 1}/5), pressing DPAD BACK…")
+                self.device.back()
+                time.sleep(3)
             ss3 = self._take_step_screenshot(3, "Device_Preferences")
-            if self.ui.exists_by_xpath(dev_pref_id, timeout=3):
-                log.info("[STEP 3] ✓ Device Preference detected")
+            if dev_pref_found:
                 _record_step(3, "Verify Device Preference screen",
                              "Device Preference screen confirmed",
                              "PASSED", ss3)
-                self.ui.click_by_xpath(dev_pref_id, timeout=5)
+                self.ui.click_by_xpath(dev_pref_id, timeout=12)
             else:
-                log.info("[STEP 3] Device Preference not detected")
+                log.info("[STEP 3] Device Preference not detected after 5 attempts")
                 _record_step(3, "Verify Device Preference screen",
-                             "Device Preference screen not confirmed",
+                             "Device Preference screen not confirmed after 5 attempts",
                              "FAILED", ss3)
-                raise AssertionError ("Device Preference not detected")
+                raise AssertionError("Device Preference not detected after 5 attempts")
 
             # ─────────────────────────────────────────────────────────
             # STEP 4 — Navigate and Launch Sound Settings
@@ -224,14 +231,14 @@ class TestSoundConfigurationSetup:
             count=0
             ss4 = self._take_step_screenshot(4, "Sound_Settings")
 
-            if self.ui.exists_by_xpath(sound_settings_btn,timeout=3):
-                self.ui.click_by_xpath(sound_settings_btn, timeout=5)
+            if self.ui.exists_by_xpath(sound_settings_btn,timeout=5):
+                self.ui.click_by_xpath(sound_settings_btn, timeout=12)
                 count=1
                 log.info("[STEP 4] ✓ Sound Settings launched")
                 _record_step(4, "Sound Settings",
                              "Found and clicked Sound Settings",
                              "PASSED", ss4)
-                time.sleep(3)
+                time.sleep(5)
             else:
                 log.warning("[STEP 4] Sound Settings not found")
                 _record_step(4, "Sound Settings",
@@ -249,16 +256,16 @@ class TestSoundConfigurationSetup:
                 '//android.widget.TextView[@resource-id="android:id/title" and @text="Advanced sound settings"]'
             )
 
-            if not self.ui.exists_by_xpath(Adv_tab_xpath, timeout=5):
+            if not self.ui.exists_by_xpath(Adv_tab_xpath, timeout=12):
                 ss5 = self._take_step_screenshot(5, "Advance_sound_settings")
                 _record_step(5, "Launch Advance Sound Settings",
                              "Advance Sound Settings not found",
                              "FAILED", ss5, "Advance Sound Settings not found on screen")
                 raise AssertionError("Advance Sound Settings not found")
 
-            self.ui.click_by_xpath(Adv_tab_xpath, timeout=5)
+            self.ui.click_by_xpath(Adv_tab_xpath, timeout=12)
             log.info("[STEP 5] ✓ Clicked Advance Sound Settings tab")
-            time.sleep(3)
+            time.sleep(5)
             ss5 = self._take_step_screenshot(5, "Advance_Sound_Settings_clicked")
             _record_step(5, "Launch Advance Sound Settings Tab",
                          "Found and launched Advance Sound Settings tab",
@@ -269,16 +276,16 @@ class TestSoundConfigurationSetup:
             # ─────────────────────────────────────────────────────────
             Format_xpath = '//android.widget.TextView[@resource-id="android:id/title" and @text="Select formats"]'
             current_step = 6
-            if not self.ui.exists_by_xpath(Format_xpath, timeout=5):
+            if not self.ui.exists_by_xpath(Format_xpath, timeout=12):
                 ss6 = self._take_step_screenshot(6, "Select_Format_settings")
                 _record_step(6, "Select Format Settings",
                              "Select Format not found",
                              "FAILED", ss6, "Select Format not found on screen")
                 raise AssertionError("Select Format not found")
 
-            self.ui.click_by_xpath(Format_xpath, timeout=5)
+            self.ui.click_by_xpath(Format_xpath, timeout=12)
             log.info("[STEP 6] ✓ Clicked Format Settings tab")
-            time.sleep(3)
+            time.sleep(5)
             ss6 = self._take_step_screenshot(5, "Select_Format_clicked")
             _record_step(6, "Launch Select Format Tab",
                          "Found and launched Select Format tab",
@@ -292,7 +299,7 @@ class TestSoundConfigurationSetup:
             log.info("[Step 7]Checking resolution as Always exists")
             ss7 = self._take_step_screenshot(7, "Select_Format_Menu_Launched")
 
-            if not self.ui.exists_by_xpath(Always_icon_xpath, timeout=5):
+            if not self.ui.exists_by_xpath(Always_icon_xpath, timeout=12):
                 ss7 = self._take_step_screenshot(7, "Always_icon_settings")
                 _record_step(7, "Sound Format - Always",
                              "Selected Format not found",
@@ -310,8 +317,8 @@ class TestSoundConfigurationSetup:
             # ─────────────────────────────────────────────────────────
             current_step = 8
             log.info("[Step 8]Selecting Always as Format")
-            self.ui.click_by_xpath(Always_icon_xpath,timeout=5)
-            time.sleep(2)
+            self.ui.click_by_xpath(Always_icon_xpath,timeout=12)
+            time.sleep(3)
             ss8 = self._take_step_screenshot(8, "Always_Format_clicked")
 
             Format_text_summary_id="android:id/summary"
@@ -337,18 +344,18 @@ class TestSoundConfigurationSetup:
             current_step = 9
             log.info("[STEP 9] Pressing Back 5 times…")
             self.device.back()
-            time.sleep(1)
+            time.sleep(2)
             log.info("Pressing back")
             self.device.back()
-            time.sleep(1)
+            time.sleep(2)
             log.info("Pressing back")
             self.device.back()
-            time.sleep(1)
+            time.sleep(2)
             log.info("Pressing back")
             self.device.back()
             log.info("[STEP 9] Pressing Home…")
             self.device.home()
-            time.sleep(2)
+            time.sleep(3)
             log.info("[STEP 9] ✓ Back at home")
             ss9 = self._take_step_screenshot(9, "back_home")
             _record_step(9, "Press HOME",

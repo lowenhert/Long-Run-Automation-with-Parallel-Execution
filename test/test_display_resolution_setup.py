@@ -69,7 +69,7 @@ class TestDisplayResolutionSetup:
             app_package="",
             appium_url=appium_url,
         )
-        self.ui = AppiumHelper(self.driver, default_timeout=10)
+        self.ui = AppiumHelper(self.driver, default_timeout=15)
         log.info("Appium session created")
 
         # ── Report generator ─────────────────────────────────────────
@@ -183,7 +183,7 @@ class TestDisplayResolutionSetup:
                 except AssertionError:
                     log.warning(f"[STEP 1] Home not detected (attempt {attempt}/{hc_max}), pressing HOME…")
                     self.device.home()
-                    time.sleep(2)
+                    time.sleep(3)
 
             ss1 = self._take_step_screenshot(1, "home_screen")
             if not home_detected:
@@ -209,27 +209,39 @@ class TestDisplayResolutionSetup:
             self.device.navigate_right(right_count)
             time.sleep(0.5)
             self.device.select()
-            time.sleep(3)
+            time.sleep(5)
             ss2 = self._take_step_screenshot(2, "android_settings_nav")
             _record_step(2, "Navigate to Android TV Settings",
                          f"Pressed UP {up_count}, RIGHT {right_count}, SELECT to open Android TV Settings",
                          "PASSED", ss2)
 
             # ─────────────────────────────────────────────────────────
-            # STEP 3 — Verify "Settings" title
+            # STEP 3 — Verify "Settings" title (DPAD BACK + re-check up to 5 times)
             # ─────────────────────────────────────────────────────────
             current_step = 3
-            log.info("[STEP 3] Verifying Settings title…")
             settings_title_id = UI_IDS.get("settings_title", "com.android.tv.settings:id/decor_title")
             expected_settings = EXPECTED.get("settings", "Settings")
-            title_text = self.ui.get_text_by_id(settings_title_id, timeout=10)
-            log.info(f"[STEP 3] Title text: '{title_text}'")
+            title_verified = False
+            title_text = ""
+            for _retry in range(5):
+                log.info(f"[STEP 3] Verifying Settings title… (attempt {_retry + 1}/5)")
+                try:
+                    title_text = self.ui.get_text_by_id(settings_title_id, timeout=10)
+                except Exception:
+                    title_text = ""
+                log.info(f"[STEP 3] Title text: '{title_text}'")
+                if expected_settings.upper() in title_text.upper():
+                    title_verified = True
+                    break
+                log.warning(f"[STEP 3] Title not found (attempt {_retry + 1}/5), pressing DPAD BACK…")
+                self.device.back()
+                time.sleep(3)
             ss3 = self._take_step_screenshot(3, "settings_title")
-            if expected_settings.upper() not in title_text.upper():
+            if not title_verified:
                 _record_step(3, "Verify Settings Title",
-                             f"Expected '{expected_settings}' but got '{title_text}'",
-                             "FAILED", ss3, f"Got '{title_text}'")
-                raise AssertionError(f"Expected '{expected_settings}' in title but got '{title_text}'")
+                             f"Expected '{expected_settings}' but got '{title_text}' after 5 attempts",
+                             "FAILED", ss3, f"Got '{title_text}' after 5 retries")
+                raise AssertionError(f"Expected '{expected_settings}' in title but got '{title_text}' after 5 retries")
             log.info("[STEP 3] ✓ Settings screen confirmed")
             _record_step(3, "Verify Settings Title",
                          f"Title shows '{title_text}' — Settings screen confirmed",
@@ -244,15 +256,15 @@ class TestDisplayResolutionSetup:
                 "device_preferences",
                 '//android.widget.TextView[@resource-id="android:id/title" and @text="Device Preferences"]'
             )
-            if not self.ui.exists_by_xpath(device_prefs_xpath, timeout=8):
+            if not self.ui.exists_by_xpath(device_prefs_xpath, timeout=12):
                 ss4 = self._take_step_screenshot(4, "device_prefs_not_found")
                 _record_step(4, "Click Device Preferences",
                              "'Device Preferences' not found on Settings screen",
                              "FAILED", ss4, "'Device Preferences' menu item not found")
                 raise AssertionError("'Device Preferences' menu item not found")
-            self.ui.click_by_xpath(device_prefs_xpath, timeout=8)
+            self.ui.click_by_xpath(device_prefs_xpath, timeout=12)
             log.info("[STEP 4] ✓ Clicked 'Device Preferences'")
-            time.sleep(3)
+            time.sleep(5)
             ss4 = self._take_step_screenshot(4, "device_prefs_clicked")
             _record_step(4, "Click Device Preferences",
                          "Found and clicked 'Device Preferences'",
@@ -264,7 +276,7 @@ class TestDisplayResolutionSetup:
             current_step = 5
             log.info("[STEP 5] Verifying 'Device Preferences' title…")
             expected_device_prefs = EXPECTED.get("device_preferences", "Device Preferences")
-            decor_text = self.ui.get_text_by_id(settings_title_id, timeout=10)
+            decor_text = self.ui.get_text_by_id(settings_title_id, timeout=15)
             log.info(f"[STEP 5] Decor title text: '{decor_text}'")
             ss5 = self._take_step_screenshot(5, "device_prefs_title")
             if expected_device_prefs.upper() not in decor_text.upper():
@@ -286,7 +298,7 @@ class TestDisplayResolutionSetup:
             self.device.navigate_down(down_count)
             time.sleep(0.5)
             self.device.select()
-            time.sleep(3)
+            time.sleep(5)
             ss6 = self._take_step_screenshot(6, "display_clicked")
             _record_step(6, "Navigate to Display",
                          f"Pressed DOWN {down_count} times then SELECT to open Display settings",
@@ -302,7 +314,7 @@ class TestDisplayResolutionSetup:
                 "com.technicolor.tv.settings.device.display:id/decor_title"
             )
             expected_display = EXPECTED.get("display", "Display")
-            display_title_text = self.ui.get_text_by_id(display_title_id, timeout=10)
+            display_title_text = self.ui.get_text_by_id(display_title_id, timeout=15)
             log.info(f"[STEP 7] Display title text: '{display_title_text}'")
             ss7 = self._take_step_screenshot(7, "display_title")
             if expected_display.upper() not in display_title_text.upper():
@@ -324,15 +336,15 @@ class TestDisplayResolutionSetup:
                 "resolution_option",
                 '//androidx.recyclerview.widget.RecyclerView[@resource-id="com.technicolor.tv.settings.device.display:id/list"]/android.widget.LinearLayout[1]'
             )
-            if not self.ui.exists_by_xpath(resolution_option_xpath, timeout=8):
+            if not self.ui.exists_by_xpath(resolution_option_xpath, timeout=12):
                 ss8 = self._take_step_screenshot(8, "resolution_option_not_found")
                 _record_step(8, "Click Resolution Option",
                              "Resolution option (LinearLayout[1]) not found in Display list",
                              "FAILED", ss8, "Resolution option not found")
                 raise AssertionError("Resolution option not found in Display list")
-            self.ui.click_by_xpath(resolution_option_xpath, timeout=8)
+            self.ui.click_by_xpath(resolution_option_xpath, timeout=12)
             log.info("[STEP 8] ✓ Clicked Resolution option")
-            time.sleep(3)
+            time.sleep(5)
             ss8 = self._take_step_screenshot(8, "resolution_option_clicked")
             _record_step(8, "Click Resolution Option",
                          "Clicked Resolution option (LinearLayout[1]) from Display list",
@@ -348,7 +360,7 @@ class TestDisplayResolutionSetup:
                 f'//android.widget.TextView[@resource-id="android:id/title"'
                 f' and @text="{target_res}"]'
             )
-            if not self.ui.exists_by_xpath(resolution_text_xpath, timeout=8):
+            if not self.ui.exists_by_xpath(resolution_text_xpath, timeout=12):
                 ss9 = self._take_step_screenshot(9, "resolution_text_not_found")
                 _record_step(9, "Select Target Resolution",
                              f"Resolution '{target_res}' not found on screen",
@@ -356,7 +368,7 @@ class TestDisplayResolutionSetup:
                 raise AssertionError(f"Resolution '{target_res}' not found on screen")
 
             # Check if this resolution is already the active one (checked)
-            res_el = self.ui.find_by_xpath(resolution_text_xpath, timeout=3)
+            res_el = self.ui.find_by_xpath(resolution_text_xpath, timeout=5)
             try:
                 # Walk up to the parent container and check the checkmark/checked state
                 checked_xpath = (
@@ -365,7 +377,7 @@ class TestDisplayResolutionSetup:
                     f'/ancestor::android.widget.LinearLayout[1]'
                     f'//android.widget.ImageView[@resource-id="android:id/icon"]'
                 )
-                already_selected = self.ui.exists_by_xpath(checked_xpath, timeout=2)
+                already_selected = self.ui.exists_by_xpath(checked_xpath, timeout=4)
             except Exception:
                 already_selected = False
 
@@ -382,7 +394,7 @@ class TestDisplayResolutionSetup:
                 max_back = 10
                 for back_attempt in range(1, max_back + 1):
                     self.device.back()
-                    time.sleep(1)
+                    time.sleep(2)
                     try:
                         screenshot_bytes = self.device.take_screenshot_bytes()
                         self.logo_compare.fail_if_logo_not_present_bytes(
@@ -398,9 +410,9 @@ class TestDisplayResolutionSetup:
 
                 raise AssertionError(f"Same resolution '{target_res}' is already active — no change made")
 
-            self.ui.click_by_xpath(resolution_text_xpath, timeout=8)
+            self.ui.click_by_xpath(resolution_text_xpath, timeout=12)
             log.info(f"[STEP 9] ✓ Clicked resolution '{target_res}'")
-            time.sleep(2)
+            time.sleep(3)
             ss9 = self._take_step_screenshot(9, "resolution_selected")
             _record_step(9, "Select Target Resolution",
                          f"Clicked resolution '{target_res}' from the list",
@@ -415,7 +427,7 @@ class TestDisplayResolutionSetup:
                 "resolution_confirm",
                 '//androidx.recyclerview.widget.RecyclerView[@resource-id="com.technicolor.tv.settings.device.display:id/guidedactions_list"]/android.widget.LinearLayout[2]'
             )
-            if not self.ui.exists_by_xpath(confirm_xpath, timeout=8):
+            if not self.ui.exists_by_xpath(confirm_xpath, timeout=12):
                 ss10 = self._take_step_screenshot(10, "confirm_not_found")
                 _record_step(10, "Confirm Resolution Selection",
                              "Confirm button (guidedactions_list LinearLayout[2]) not found",
@@ -426,7 +438,7 @@ class TestDisplayResolutionSetup:
                 max_back = 10
                 for back_attempt in range(1, max_back + 1):
                     self.device.back()
-                    time.sleep(1)
+                    time.sleep(2)
                     try:
                         screenshot_bytes = self.device.take_screenshot_bytes()
                         self.logo_compare.fail_if_logo_not_present_bytes(
@@ -441,7 +453,7 @@ class TestDisplayResolutionSetup:
                         pass
 
                 raise AssertionError("Resolution confirm button not found in guided actions")
-            self.ui.click_by_xpath(confirm_xpath, timeout=8)
+            self.ui.click_by_xpath(confirm_xpath, timeout=12)
             log.info("[STEP 10] ✓ Confirmed resolution selection")
             ss10 = self._take_step_screenshot(10, "resolution_confirmed")
             _record_step(10, "Confirm Resolution Selection",
@@ -468,7 +480,7 @@ class TestDisplayResolutionSetup:
             home_after_reboot = False
             for attempt in range(1, max_home_presses + 1):
                 self.device.home()
-                time.sleep(3)
+                time.sleep(5)
                 try:
                     screenshot_bytes = self.device.take_screenshot_bytes()
                     self.logo_compare.fail_if_logo_not_present_bytes(

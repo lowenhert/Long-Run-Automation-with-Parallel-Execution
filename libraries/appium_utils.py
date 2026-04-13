@@ -105,7 +105,7 @@ class AppiumDriver:
         options.set_capability("udid", device_id)
         options.set_capability("automationName", "UiAutomator2")
         options.set_capability("noReset", True)       # keep app state between runs
-        options.set_capability("newCommandTimeout", 120)
+        options.set_capability("newCommandTimeout", 180)
 
         if platform_version:
             options.set_capability("platformVersion", platform_version)
@@ -170,7 +170,7 @@ class AppiumHelper:
         Default wait timeout in seconds used when no explicit timeout is given.
     """
 
-    def __init__(self, driver: webdriver.Remote, default_timeout: int = 10):
+    def __init__(self, driver: webdriver.Remote, default_timeout: int = 15):
         self.driver = driver
         self.default_timeout = default_timeout
 

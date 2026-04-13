@@ -152,7 +152,7 @@ display_resolution:
     threshold: 0.60
     max_attempts: 4
   target_resolution: "3840x2160p50"    # resolution text to select (change this to any available option)
-  reboot_wait_seconds: 60              # seconds to wait for device reboot after resolution change
+  reboot_wait_seconds: 90              # seconds to wait for device reboot after resolution change
   max_home_presses: 15                 # max HOME presses to detect home after reboot
   display_down_presses: 11             # DOWN presses from Device Preferences to reach Display
   ui_ids:

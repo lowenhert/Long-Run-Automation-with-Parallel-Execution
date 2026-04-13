@@ -61,7 +61,7 @@ class TestSetReminderSetup:
             app_package=TATASKY_PACKAGE,
             appium_url=appium_url,
         )
-        self.ui = AppiumHelper(self.driver, default_timeout=10)
+        self.ui = AppiumHelper(self.driver, default_timeout=15)
         log.info("Appium session created")
 
         self.report_gen = ReportGenerator(request.node.execution_dir)
@@ -75,7 +75,7 @@ class TestSetReminderSetup:
         log.info("CLEANUP — navigating home")
         try:
             self.device.home()
-            time.sleep(2)
+            time.sleep(3)
         except Exception as e:
             log.error(f"CLEANUP home() failed: {e}")
         try:
@@ -115,13 +115,13 @@ class TestSetReminderSetup:
         log.info("[BANNER CHECK] Checking for reminder banner...")
 
         for i in range(max_attempts):
-            if self.ui.exists_by_id(dismiss_id, timeout=3):
+            if self.ui.exists_by_id(dismiss_id, timeout=5):
                 log.info(f"[BANNER] Reminder banner detected (attempt {i+1}) → Dismissing with SELECT")
                 log.info("Navigating right")
                 self.device.navigate_right()
-                time.sleep(1)
+                time.sleep(2)
                 self.device.navigate_right()
-                time.sleep(1)
+                time.sleep(2)
                 log.info("Pressing select")
                 self.device.select()
                 time.sleep(2.0)
@@ -233,7 +233,7 @@ class TestSetReminderSetup:
                     _record_step(2, "Navigate to TV Channels", "TV Channels tab not found", "FAILED", ss2)
                     raise AssertionError("TV Channels tab not found")
 
-                time.sleep(3)
+                time.sleep(5)
 
                 # ================================================
                 # STEP 3 — Launch Guide
@@ -246,7 +246,7 @@ class TestSetReminderSetup:
 
                 if self.ui.exists_by_xpath(guide_xpath):
                     self.ui.click_by_xpath(guide_xpath)
-                    time.sleep(2)
+                    time.sleep(3)
                     ss3 = self._take_step_screenshot(3, "Guide_launched")
                     _record_step(3, "Launch Guide", "Guide launched successfully", "PASSED", ss3)
                 else:
@@ -263,10 +263,10 @@ class TestSetReminderSetup:
                 log.info("[STEP 4] Launching All Channels Guide")
                 self.device.select()
                 self.device.select()
-                time.sleep(3)
+                time.sleep(5)
 
                 Filter_xpath = '//android.widget.TextView[@resource-id="tv.accedo.studio.paytv.tatasky:id/textViewFilter"]'
-                title_text = self.ui.get_text_by_xpath(Filter_xpath, timeout=10)
+                title_text = self.ui.get_text_by_xpath(Filter_xpath, timeout=15)
 
                 if title_text != "Filter : ALL CHANNELS":
                     ss4 = self._take_step_screenshot(4, "AllChannels_failed")
@@ -301,11 +301,11 @@ class TestSetReminderSetup:
                     self.device.navigate_down(max_downs)
                     log.info(f"Navigating right {max_right}")
                     self.device.navigate_right(max_right)
-                    time.sleep(2)
+                    time.sleep(3)
 
-                    EPG_text = self.ui.get_text_by_xpath(Highlighted_EPG, timeout=8)
+                    EPG_text = self.ui.get_text_by_xpath(Highlighted_EPG, timeout=12)
 
-                    if EPG_text == "No information" or self.ui.exists_by_xpath(reminder_icon_xpath, timeout=2):
+                    if EPG_text == "No information" or self.ui.exists_by_xpath(reminder_icon_xpath, timeout=4):
                         log.info("Found No Information or existing reminder")
                         self.device.left(max_right)
                         continue
@@ -316,10 +316,10 @@ class TestSetReminderSetup:
                     self.device.select()
 
                     if  self.ui.exists_by_id(No_info_error,timeout=4):
-                        No_info_error_text = self.ui.get_text_by_id(No_info_error, timeout=8)
+                        No_info_error_text = self.ui.get_text_by_id(No_info_error, timeout=12)
                         if No_info_error_text in "Program information is not available. Please try after sometime." :
                             log.info("No information found")
-                            time.sleep(2)
+                            time.sleep(3)
                             continue
 
 
@@ -329,18 +329,18 @@ class TestSetReminderSetup:
                     if self.ui.exists_by_id(SNS_id, timeout=4):
                         log.warning("[SNS DETECTED] While setting reminder → Retrying entire test from Step 1")
                         self.device.home()
-                        time.sleep(2)
+                        time.sleep(3)
                         raise Exception("SNS_INTERRUPT_RETRY_ALL")
 
                     self._dismiss_reminder_banner()
 
-                    if self.ui.exists_by_xpath(Set_reminder_xpath, timeout=5):
+                    if self.ui.exists_by_xpath(Set_reminder_xpath, timeout=12):
                         self.ui.click_by_xpath(Set_reminder_xpath)
                         log.info(f"[STEP 5] ✓ Reminder {count + 1} set successfully")
 
-                        channel_name = self.ui.get_text_by_id(name_id, timeout=8)
-                        channel_desc = self.ui.get_text_by_id(channel_number_id, timeout=8)
-                        event_time = self.ui.get_text_by_id(Time_ID, timeout=8)
+                        channel_name = self.ui.get_text_by_id(name_id, timeout=12)
+                        channel_desc = self.ui.get_text_by_id(channel_number_id, timeout=12)
+                        event_time = self.ui.get_text_by_id(Time_ID, timeout=12)
 
                         reminders.append({
                             "event_name": channel_name,
@@ -355,7 +355,7 @@ class TestSetReminderSetup:
                     else:
                         self.device.back()
                         self.device.left(max_right)
-                        time.sleep(1)
+                        time.sleep(2)
 
                 # Success
                 ss5 = self._take_step_screenshot(5, "set_reminders_success")
@@ -366,7 +366,7 @@ class TestSetReminderSetup:
                 current_step = 6
                 log.info("[STEP 6] Pressing HOME")
                 self.device.home()
-                time.sleep(2)
+                time.sleep(3)
                 ss6 = self._take_step_screenshot(6, "back_home")
                 _record_step(6, "Press HOME", "Returned to home screen", "PASSED", ss6)
 

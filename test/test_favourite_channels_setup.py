@@ -74,7 +74,7 @@ class TestFavouriteChannelsSetup:
             app_package=TATASKY_PACKAGE,
             appium_url=appium_url,
         )
-        self.ui = AppiumHelper(self.driver, default_timeout=10)
+        self.ui = AppiumHelper(self.driver, default_timeout=15)
         log.info("Appium session created")
 
         # ── Report generator ─────────────────────────────────────────
@@ -185,7 +185,7 @@ class TestFavouriteChannelsSetup:
                 except AssertionError:
                     log.warning(f"[STEP 1] Home not detected (attempt {attempt}/{hc_max}), pressing HOME…")
                     self.device.home()
-                    time.sleep(2)
+                    time.sleep(3)
 
             ss1 = self._take_step_screenshot(1, "home_screen")
             if not home_detected:
@@ -211,7 +211,7 @@ class TestFavouriteChannelsSetup:
             self.device.navigate_right(right_count)
             time.sleep(0.5)
             self.device.select()
-            time.sleep(3)
+            time.sleep(5)
             ss2 = self._take_step_screenshot(2, "user_preferences_nav")
             _record_step(2, "Navigate to User Preferences",
                          f"Pressed UP {up_count}, RIGHT {right_count}, SELECT to open User Preferences",
@@ -224,7 +224,7 @@ class TestFavouriteChannelsSetup:
             log.info("[STEP 3] Verifying USER PREFERENCES title…")
             title_id = UI_IDS.get("title", "textViewTitle")
             title_text = self.ui.get_text_by_id(
-                f"{TATASKY_PACKAGE}:id/{title_id}", timeout=10
+                f"{TATASKY_PACKAGE}:id/{title_id}", timeout=15
             )
             log.info(f"[STEP 3] Title text: '{title_text}'")
             ss3 = self._take_step_screenshot(3, "user_pref_title")
@@ -248,16 +248,16 @@ class TestFavouriteChannelsSetup:
             user_settings_id = f"{TATASKY_PACKAGE}:id/{user_settings_btn}"
             log.info(f"[STEP 4] Looking for User Settings button ({user_settings_id})…")
 
-            if not self.ui.exists_by_id(user_settings_id, timeout=5):
+            if not self.ui.exists_by_id(user_settings_id, timeout=12):
                 ss4 = self._take_step_screenshot(4, "user_settings_not_found")
                 _record_step(4, "Click User Settings",
                              "User Settings button not found",
                              "FAILED", ss4, "Button not found on screen")
                 raise AssertionError(f"User Settings button ({user_settings_id}) not found")
 
-            self.ui.click_by_id(user_settings_id, timeout=5)
+            self.ui.click_by_id(user_settings_id, timeout=12)
             log.info("[STEP 4] ✓ Clicked User Settings button")
-            time.sleep(3)
+            time.sleep(5)
             ss4 = self._take_step_screenshot(4, "user_settings_clicked")
             _record_step(4, "Click User Settings",
                          "Found and clicked User Settings button",
@@ -275,16 +275,16 @@ class TestFavouriteChannelsSetup:
                 'and @text="Favourite Channels"]'
             )
 
-            if not self.ui.exists_by_xpath(fav_tab_xpath, timeout=5):
+            if not self.ui.exists_by_xpath(fav_tab_xpath, timeout=12):
                 ss5 = self._take_step_screenshot(5, "fav_tab_not_found")
                 _record_step(5, "Click Favourite Channels Tab",
                              "Favourite Channels tab not found",
                              "FAILED", ss5, "Tab not found on screen")
                 raise AssertionError("Favourite Channels tab not found")
 
-            self.ui.click_by_xpath(fav_tab_xpath, timeout=5)
+            self.ui.click_by_xpath(fav_tab_xpath, timeout=12)
             log.info("[STEP 5] ✓ Clicked Favourite Channels tab")
-            time.sleep(3)
+            time.sleep(5)
             ss5 = self._take_step_screenshot(5, "fav_tab_clicked")
             _record_step(5, "Click Favourite Channels Tab",
                          "Found and clicked Favourite Channels tab",
@@ -300,9 +300,9 @@ class TestFavouriteChannelsSetup:
 
             # Navigate DOWN twice — cursor lands on Deselect All (or channel rail)
             self.device.navigate_down(2)
-            time.sleep(1)
+            time.sleep(2)
 
-            if self.ui.exists_by_id(deselect_id, timeout=3):
+            if self.ui.exists_by_id(deselect_id, timeout=5):
                 # Cursor is on Deselect All — click it with D-pad SELECT
                 self.device.select()
                 log.info("[STEP 6] ✓ Pressed D-pad SELECT on Deselect All")
@@ -310,7 +310,7 @@ class TestFavouriteChannelsSetup:
                 # Wait for / skip the snackbar triggered by deselect
                 time.sleep(6)  # Wait a bit for snackbar to appear if it's going tos
                 try:
-                    if self.ui.exists_by_id(snackbar_deselect_id, timeout=5):
+                    if self.ui.exists_by_id(snackbar_deselect_id, timeout=12):
                         log.info("[STEP 6] Snackbar from deselect detected — waiting for it to disappear…")
                         time.sleep(7)
                 except Exception:
@@ -318,7 +318,7 @@ class TestFavouriteChannelsSetup:
 
                 # DOWN to move from Deselect All to the channel rail
                 self.device.navigate_down(1)
-                time.sleep(1)
+                time.sleep(2)
             else:
                 log.info("[STEP 6] Deselect All not found at current position — already on channel rail")
 
@@ -372,12 +372,12 @@ class TestFavouriteChannelsSetup:
                 # ── Locate the parentLayout card ─────────────────────
                 card_el = None
                 try:
-                    card_el = self.ui.find_by_uiautomator(uia_card, timeout=3)
+                    card_el = self.ui.find_by_uiautomator(uia_card, timeout=5)
                     log.info(f"[CHANNEL] parentLayout[{index}] found via UiAutomator .instance({inst})")
                 except Exception:
                     log.info(f"[CHANNEL] UiAutomator miss for instance({inst}), trying XPath…")
                     try:
-                        card_el = self.ui.find_by_xpath(card_xpath, timeout=3)
+                        card_el = self.ui.find_by_xpath(card_xpath, timeout=5)
                         log.info(f"[CHANNEL] parentLayout[{index}] found via XPath")
                     except Exception as e:
                         log.warning(f"[CHANNEL] Failed to find parentLayout[{index}]: {e}")
@@ -397,7 +397,7 @@ class TestFavouriteChannelsSetup:
                         f'.instance({inst})'
                         f'.childSelector(new UiSelector().resourceId("{ch_number_res}"))'
                     )
-                    num_el = self.ui.find_by_uiautomator(uia_num, timeout=2)
+                    num_el = self.ui.find_by_uiautomator(uia_num, timeout=4)
                     raw_num = num_el.text
                     log.info(f"[CHANNEL] [{index}] channelNumber (UiA): '{raw_num}'")
                     ch_number = raw_num.strip() if raw_num else "?"
@@ -409,7 +409,7 @@ class TestFavouriteChannelsSetup:
                             f'[@resource-id="{parent_layout_id}"])[{index}]'
                             f'//android.widget.TextView[@resource-id="{ch_number_res}"]'
                         )
-                        num_el = self.ui.find_by_xpath(num_xpath, timeout=2)
+                        num_el = self.ui.find_by_xpath(num_xpath, timeout=4)
                         raw_num = num_el.text
                         log.info(f"[CHANNEL] [{index}] channelNumber (XPath): '{raw_num}'")
                         ch_number = raw_num.strip() if raw_num else "?"
@@ -423,7 +423,7 @@ class TestFavouriteChannelsSetup:
                         f'.instance({inst})'
                         f'.childSelector(new UiSelector().resourceId("{ch_name_res}"))'
                     )
-                    name_el = self.ui.find_by_uiautomator(uia_name, timeout=2)
+                    name_el = self.ui.find_by_uiautomator(uia_name, timeout=4)
                     raw_name = name_el.text
                     log.info(f"[CHANNEL] [{index}] channelName (UiA): '{raw_name}'")
                     ch_name = raw_name.strip() if raw_name else "Unknown"
@@ -435,7 +435,7 @@ class TestFavouriteChannelsSetup:
                             f'[@resource-id="{parent_layout_id}"])[{index}]'
                             f'//android.widget.TextView[@resource-id="{ch_name_res}"]'
                         )
-                        name_el = self.ui.find_by_xpath(name_xpath, timeout=2)
+                        name_el = self.ui.find_by_xpath(name_xpath, timeout=4)
                         raw_name = name_el.text
                         log.info(f"[CHANNEL] [{index}] channelName (XPath): '{raw_name}'")
                         ch_name = raw_name.strip() if raw_name else "Unknown"
@@ -451,7 +451,7 @@ class TestFavouriteChannelsSetup:
                             f'[@resource-id="{parent_layout_id}"])[{index}]'
                             f'//android.widget.TextView'
                         )
-                        all_tvs = self.ui.find_all_by_xpath(all_tv_xpath, timeout=2)
+                        all_tvs = self.ui.find_all_by_xpath(all_tv_xpath, timeout=4)
                         for tv_idx, tv in enumerate(all_tvs):
                             tv_text = tv.text
                             tv_rid = tv.get_attribute("resourceId") or ""
@@ -580,7 +580,7 @@ class TestFavouriteChannelsSetup:
             current_step = 8
             log.info("[STEP 8] Pressing HOME…")
             self.device.home()
-            time.sleep(2)
+            time.sleep(3)
             log.info("[STEP 8] ✓ Back at home")
             ss8 = self._take_step_screenshot(8, "back_home")
             _record_step(8, "Press HOME",

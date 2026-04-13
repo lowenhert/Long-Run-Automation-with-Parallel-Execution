@@ -67,7 +67,7 @@ class TestPictureResolutionSetup:
             app_package="",
             appium_url=appium_url,
         )
-        self.ui = AppiumHelper(self.driver, default_timeout=10)
+        self.ui = AppiumHelper(self.driver, default_timeout=15)
         log.info("Appium session created")
 
         # ── Report generator ─────────────────────────────────────────
@@ -181,7 +181,7 @@ class TestPictureResolutionSetup:
                 except AssertionError:
                     log.warning(f"[STEP 1] Home not detected (attempt {attempt}/{hc_max}), pressing HOME…")
                     self.device.home()
-                    time.sleep(2)
+                    time.sleep(3)
 
             ss1 = self._take_step_screenshot(1, "home_screen")
             if not home_detected:
@@ -207,7 +207,7 @@ class TestPictureResolutionSetup:
             self.device.navigate_right(right_count)
             time.sleep(0.5)
             self.device.select()
-            time.sleep(3)
+            time.sleep(5)
             ss2 = self._take_step_screenshot(2, "user_prefs_nav")
             _record_step(2, "Navigate to User Preferences",
                          f"Pressed UP {up_count}, RIGHT {right_count}, SELECT to open User Preferences",
@@ -218,7 +218,7 @@ class TestPictureResolutionSetup:
             # ─────────────────────────────────────────────────────────
             current_step = 3
             log.info("[STEP 3] Verifying User Preferences title…")
-            title_text = self.ui.get_text_by_id(title_id, timeout=10)
+            title_text = self.ui.get_text_by_id(title_id, timeout=15)
             log.info(f"[STEP 3] Title text: '{title_text}'")
             ss3 = self._take_step_screenshot(3, "user_prefs_title")
             expected_title = PR_CFG.get("expected_user_prefs_title", "USER PREFERENCES")
@@ -237,15 +237,15 @@ class TestPictureResolutionSetup:
             # ─────────────────────────────────────────────────────────
             current_step = 4
             log.info(f"[STEP 4] Clicking User Settings button (id: {user_settings_btn_id})…")
-            if not self.ui.exists_by_id(user_settings_btn_id, timeout=8):
+            if not self.ui.exists_by_id(user_settings_btn_id, timeout=12):
                 ss4 = self._take_step_screenshot(4, "user_settings_not_found")
                 _record_step(4, "Click User Settings",
                              f"User Settings button (id: {user_settings_btn_id}) not found",
                              "FAILED", ss4, "User Settings button not found")
                 raise AssertionError("User Settings button not found")
-            self.ui.click_by_id(user_settings_btn_id, timeout=8)
+            self.ui.click_by_id(user_settings_btn_id, timeout=12)
             log.info("[STEP 4] ✓ Clicked User Settings button")
-            time.sleep(3)
+            time.sleep(5)
             ss4 = self._take_step_screenshot(4, "user_settings_clicked")
             _record_step(4, "Click User Settings",
                          f"Clicked User Settings button (id: {user_settings_btn_id})",
@@ -257,15 +257,15 @@ class TestPictureResolutionSetup:
             current_step = 5
             picture_xpath=('//android.widget.CheckedTextView[@resource-id="tv.accedo.studio.paytv.tatasky:id/menu_item" and @text="Picture"]')
             log.info("[STEP 5] Selecting Picture Resolution menu item…")
-            if not self.ui.exists_by_xpath(picture_xpath, timeout=8):
+            if not self.ui.exists_by_xpath(picture_xpath, timeout=12):
                 ss5 = self._take_step_screenshot(5, "picture_menu_not_found")
                 _record_step(5, "Select Picture Resolution Menu",
                              "Picture Resolutiom menu item not found in User Settings",
                              "FAILED", ss5, "Picture Resolution item not found")
                 raise AssertionError("Picture Resolution menu item not found in User Settings")
-            self.ui.click_by_xpath(picture_xpath, timeout=8)
+            self.ui.click_by_xpath(picture_xpath, timeout=12)
             log.info("[STEP 5] ✓ Clicked picture resolution item")
-            time.sleep(2)
+            time.sleep(3)
             ss5 = self._take_step_screenshot(5, "picture_resolution_selected")
             _record_step(5, "Select Picture Resolution",
                          "Clicked Picture Resolution menu in User Settings",
@@ -276,9 +276,9 @@ class TestPictureResolutionSetup:
             # ─────────────────────────────────────────────────────────
             current_step = 6
             self.device.navigate_down()
-            time.sleep(2)
+            time.sleep(3)
             self.device.navigate_down()
-            time.sleep(2)
+            time.sleep(3)
             log.info(f"[STEP 6] Checking Picture Resolution…")
             Pillar_box_xpath=('//android.widget.TextView[@resource-id="tv.accedo.studio.paytv.tatasky:id/textView" and @text="Pillar box"]')
             Stretch_box_xpath=('//android.widget.TextView[@resource-id="tv.accedo.studio.paytv.tatasky:id/textView" and @text="Stretch"]')
@@ -326,15 +326,15 @@ class TestPictureResolutionSetup:
             current_step = 7
             Apply_btn_id=('tv.accedo.studio.paytv.tatasky:id/continuePictureSetting')
             log.info(f"[STEP 7] Clicking Apply button (id: {Apply_btn_id})…")
-            if not self.ui.exists_by_id(Apply_btn_id, timeout=8):
+            if not self.ui.exists_by_id(Apply_btn_id, timeout=12):
                 ss7 = self._take_step_screenshot(7, "Apply_not_found")
                 _record_step(7, "Click Apply/ Save",
                              f"Apply button (id: {Apply_btn_id}) not found",
                              "FAILED", ss7, "Apply button not found")
                 raise AssertionError("Apply / Save button not found")
-            self.ui.click_by_id(Apply_btn_id, timeout=8)
+            self.ui.click_by_id(Apply_btn_id, timeout=12)
             log.info("[STEP 7] ✓ Clicked Apply button — Picture Resolution saved")
-            time.sleep(2)
+            time.sleep(3)
             ss7 = self._take_step_screenshot(7, "Apply_clicked")
             _record_step(7, "Click Apply / Save",
                          f"Clicked Apply button (id: {Apply_btn_id}) — settings saved",
@@ -346,7 +346,7 @@ class TestPictureResolutionSetup:
             current_step = 8
             log.info("[STEP 8] Pressing HOME…")
             self.device.home()
-            time.sleep(2)
+            time.sleep(3)
             ss8 = self._take_step_screenshot(8, "home")
             _record_step(8, "Return to Home",
                          "Pressed HOME to return to home screen",

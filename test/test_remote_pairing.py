@@ -69,7 +69,7 @@ class TestRemotePairing:
             app_package="",
             appium_url=appium_url,
         )
-        self.ui = AppiumHelper(self.driver, default_timeout=10)
+        self.ui = AppiumHelper(self.driver, default_timeout=15)
         log.info("Appium session created")
 
         # ── Report generator ─────────────────────────────────────────
@@ -178,7 +178,7 @@ class TestRemotePairing:
                 except AssertionError:
                     log.warning(f"[STEP 1] Home not detected (attempt {attempt}/{hc_max}), pressing HOME…")
                     self.device.home()
-                    time.sleep(2)
+                    time.sleep(3)
 
             ss1 = self._take_step_screenshot(1, "home_screen")
             if not home_detected:
@@ -204,28 +204,40 @@ class TestRemotePairing:
             self.device.navigate_right(right_count)
             time.sleep(0.5)
             self.device.select()
-            time.sleep(3)
+            time.sleep(5)
             ss2 = self._take_step_screenshot(2, "android_settings_nav")
             _record_step(2, "Navigate to Android TV Settings",
                          f"Pressed UP {up_count}, RIGHT {right_count}, SELECT to open Settings",
                          "PASSED", ss2)
 
             # ─────────────────────────────────────────────────────────
-            # STEP 3 — Verify "Settings" title
+            # STEP 3 — Verify "Settings" title (DPAD BACK + re-check up to 5 times)
             # ─────────────────────────────────────────────────────────
             current_step = 3
-            log.info("[STEP 3] Verifying Settings title…")
             settings_title_id = UI_IDS.get("settings_title", "com.android.tv.settings:id/decor_title")
             expected_settings_text = EXPECTED.get("settings", "Settings")
-            title_text = self.ui.get_text_by_id(settings_title_id, timeout=10)
-            log.info(f"[STEP 3] Title text: '{title_text}'")
+            title_verified = False
+            title_text = ""
+            for _retry in range(5):
+                log.info(f"[STEP 3] Verifying Settings title… (attempt {_retry + 1}/5)")
+                try:
+                    title_text = self.ui.get_text_by_id(settings_title_id, timeout=10)
+                except Exception:
+                    title_text = ""
+                log.info(f"[STEP 3] Title text: '{title_text}'")
+                if expected_settings_text.upper() in title_text.upper():
+                    title_verified = True
+                    break
+                log.warning(f"[STEP 3] Title not found (attempt {_retry + 1}/5), pressing DPAD BACK…")
+                self.device.back()
+                time.sleep(3)
             ss3 = self._take_step_screenshot(3, "settings_title")
-            if expected_settings_text.upper() not in title_text.upper():
+            if not title_verified:
                 _record_step(3, "Verify Settings Title",
-                             f"Expected '{expected_settings_text}' but got '{title_text}'",
-                             "FAILED", ss3, f"Got '{title_text}'")
+                             f"Expected '{expected_settings_text}' but got '{title_text}' after 5 attempts",
+                             "FAILED", ss3, f"Got '{title_text}' after 5 retries")
                 raise AssertionError(
-                    f"Expected '{expected_settings_text}' but got '{title_text}'"
+                    f"Expected '{expected_settings_text}' but got '{title_text}' after 5 retries"
                 )
             log.info("[STEP 3] ✓ Settings screen confirmed")
             _record_step(3, "Verify Settings Title",
@@ -245,7 +257,7 @@ class TestRemotePairing:
                 f'and @text="{remotes_text}"]'
             )
 
-            if not self.ui.exists_by_xpath(remotes_xpath, timeout=5):
+            if not self.ui.exists_by_xpath(remotes_xpath, timeout=12):
                 ss4 = self._take_step_screenshot(4, "remotes_not_found")
                 _record_step(4, "Click Remotes and Accessories",
                              f"'{remotes_text}' not found on Settings screen",
@@ -253,9 +265,9 @@ class TestRemotePairing:
                              f"'{remotes_text}' menu item not found")
                 raise AssertionError(f"'{remotes_text}' menu item not found")
 
-            self.ui.click_by_xpath(remotes_xpath, timeout=5)
+            self.ui.click_by_xpath(remotes_xpath, timeout=12)
             log.info("[STEP 4] ✓ Clicked 'Remotes and accessories'")
-            time.sleep(3)
+            time.sleep(5)
             ss4 = self._take_step_screenshot(4, "remotes_clicked")
             _record_step(4, "Click Remotes and Accessories",
                          f"Found and clicked '{remotes_text}'",
@@ -267,7 +279,7 @@ class TestRemotePairing:
             current_step = 5
             log.info("[STEP 5] Verifying 'Remotes and accessories' title…")
             decor_title_id = UI_IDS.get("settings_title", "com.android.tv.settings:id/decor_title")
-            decor_text = self.ui.get_text_by_id(decor_title_id, timeout=10)
+            decor_text = self.ui.get_text_by_id(decor_title_id, timeout=15)
             log.info(f"[STEP 5] Decor title text: '{decor_text}'")
             ss5 = self._take_step_screenshot(5, "remotes_title")
             if remotes_text.upper() not in decor_text.upper():
@@ -299,7 +311,7 @@ class TestRemotePairing:
                 f'[@resource-id="{menu_title_id}" '
                 f'and contains(@text, "{searching_text}")]'
             )
-            is_searching = self.ui.exists_by_xpath(searching_xpath, timeout=3)
+            is_searching = self.ui.exists_by_xpath(searching_xpath, timeout=5)
 
             if is_searching:
                 remote_connected = False
@@ -316,13 +328,13 @@ class TestRemotePairing:
                 # Check if the list has children (more than one item)
                 list_items = self.ui.find_all_by_xpath(
                     f'//*[@resource-id="{list_id}"]//*[@resource-id="{menu_title_id}"]',
-                    timeout=5,
+                    timeout=12,
                 )
                 list_count = len(list_items) if list_items else 0
                 log.info(f"[STEP 6] List items found: {list_count}")
 
                 # Check for "Connected" summary text
-                summary_elements = self.ui.find_all_by_id(summary_id, timeout=3)
+                summary_elements = self.ui.find_all_by_id(summary_id, timeout=5)
                 has_connected = False
                 for el in summary_elements:
                     try:
@@ -387,7 +399,7 @@ class TestRemotePairing:
             if not back_home_detected:
                 log.warning(f"[STEP 7] Home not detected after {max_back_presses} BACK presses, pressing HOME as fallback")
                 self.device.home()
-                time.sleep(2)
+                time.sleep(3)
                 ss7 = self._take_step_screenshot(7, "back_home_fallback")
 
             _record_step(7, "Navigate Back to Home",

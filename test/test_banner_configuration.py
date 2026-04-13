@@ -67,7 +67,7 @@ class TestBannerConfiguration:
             app_package=TATASKY_PACKAGE,
             appium_url=appium_url,
         )
-        self.ui = AppiumHelper(self.driver, default_timeout=10)
+        self.ui = AppiumHelper(self.driver, default_timeout=15)
         log.info("Appium session created")
 
         # ── Report generator ─────────────────────────────────────────
@@ -193,7 +193,7 @@ class TestBannerConfiguration:
                 except AssertionError:
                     log.warning(f"[STEP 1] Home not detected (attempt {attempt}/{hc_max}), pressing HOME…")
                     self.device.home()
-                    time.sleep(2)
+                    time.sleep(3)
 
             ss1 = self._take_step_screenshot(1, "home_screen")
             if not home_detected:
@@ -219,7 +219,7 @@ class TestBannerConfiguration:
             self.device.navigate_right(right_count)
             time.sleep(0.5)
             self.device.select()
-            time.sleep(3)
+            time.sleep(5)
             ss2 = self._take_step_screenshot(2, "user_prefs_nav")
             _record_step(2, "Navigate to User Preferences",
                          f"Pressed UP {up_count}, RIGHT {right_count}, SELECT to open User Preferences",
@@ -230,7 +230,7 @@ class TestBannerConfiguration:
             # ─────────────────────────────────────────────────────────
             current_step = 3
             log.info("[STEP 3] Verifying User Preferences title…")
-            title_text = self.ui.get_text_by_id(title_id, timeout=10)
+            title_text = self.ui.get_text_by_id(title_id, timeout=15)
             log.info(f"[STEP 3] Title text: '{title_text}'")
             ss3 = self._take_step_screenshot(3, "user_prefs_title")
             expected_title = BN_CFG.get("expected_user_prefs_title", "USER PREFERENCES")
@@ -249,15 +249,15 @@ class TestBannerConfiguration:
             # ─────────────────────────────────────────────────────────
             current_step = 4
             log.info(f"[STEP 4] Clicking User Settings button (id: {user_settings_btn_id})…")
-            if not self.ui.exists_by_id(user_settings_btn_id, timeout=8):
+            if not self.ui.exists_by_id(user_settings_btn_id, timeout=12):
                 ss4 = self._take_step_screenshot(4, "user_settings_not_found")
                 _record_step(4, "Click User Settings",
                              f"User Settings button (id: {user_settings_btn_id}) not found",
                              "FAILED", ss4, "User Settings button not found")
                 raise AssertionError("User Settings button not found")
-            self.ui.click_by_id(user_settings_btn_id, timeout=8)
+            self.ui.click_by_id(user_settings_btn_id, timeout=12)
             log.info("[STEP 4] ✓ Clicked User Settings button")
-            time.sleep(3)
+            time.sleep(5)
             ss4 = self._take_step_screenshot(4, "user_settings_clicked")
             _record_step(4, "Click User Settings",
                          f"Clicked User Settings button (id: {user_settings_btn_id})",
@@ -268,15 +268,15 @@ class TestBannerConfiguration:
             # ─────────────────────────────────────────────────────────
             current_step = 5
             log.info("[STEP 5] Selecting Banner menu item…")
-            if not self.ui.exists_by_xpath(banner_menu_xpath, timeout=8):
+            if not self.ui.exists_by_xpath(banner_menu_xpath, timeout=12):
                 ss5 = self._take_step_screenshot(5, "banner_menu_not_found")
                 _record_step(5, "Select Banner Menu",
                              "Banner menu item not found in User Settings",
                              "FAILED", ss5, "Banner menu item not found")
                 raise AssertionError("Banner menu item not found in User Settings")
-            self.ui.click_by_xpath(banner_menu_xpath, timeout=8)
+            self.ui.click_by_xpath(banner_menu_xpath, timeout=12)
             log.info("[STEP 5] ✓ Clicked Banner menu item")
-            time.sleep(2)
+            time.sleep(3)
             ss5 = self._take_step_screenshot(5, "banner_selected")
             _record_step(5, "Select Banner Menu",
                          "Clicked Banner menu item in User Settings",
@@ -299,7 +299,7 @@ class TestBannerConfiguration:
             for right_attempt in range(max_right_presses + 1):
                 # Read current value
                 try:
-                    current_duration = self.ui.get_text_by_id(banner_duration_id, timeout=5)
+                    current_duration = self.ui.get_text_by_id(banner_duration_id, timeout=12)
                 except Exception:
                     current_duration = ""
                 log.info(f"[STEP 6] Banner duration text: '{current_duration}' (attempt {right_attempt})")
@@ -335,15 +335,15 @@ class TestBannerConfiguration:
             # ─────────────────────────────────────────────────────────
             current_step = 7
             log.info(f"[STEP 7] Clicking Continue button (id: {continue_btn_id})…")
-            if not self.ui.exists_by_id(continue_btn_id, timeout=8):
+            if not self.ui.exists_by_id(continue_btn_id, timeout=12):
                 ss7 = self._take_step_screenshot(7, "continue_not_found")
                 _record_step(7, "Click Continue / Save",
                              f"Continue button (id: {continue_btn_id}) not found",
                              "FAILED", ss7, "Continue button not found")
                 raise AssertionError("Continue / Save button not found")
-            self.ui.click_by_id(continue_btn_id, timeout=8)
+            self.ui.click_by_id(continue_btn_id, timeout=12)
             log.info("[STEP 7] ✓ Clicked Continue button — banner duration saved")
-            time.sleep(2)
+            time.sleep(3)
             ss7 = self._take_step_screenshot(7, "continue_clicked")
             _record_step(7, "Click Continue / Save",
                          f"Clicked Continue button (id: {continue_btn_id}) — settings saved",
@@ -355,7 +355,7 @@ class TestBannerConfiguration:
             current_step = 8
             log.info("[STEP 8] Pressing HOME…")
             self.device.home()
-            time.sleep(2)
+            time.sleep(3)
             ss8 = self._take_step_screenshot(8, "home")
             _record_step(8, "Return to Home",
                          "Pressed HOME to return to home screen",

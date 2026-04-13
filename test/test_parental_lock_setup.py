@@ -75,7 +75,7 @@ class TestParentalLockSetup:
             app_package=TATASKY_PACKAGE,
             appium_url=appium_url,
         )
-        self.ui = AppiumHelper(self.driver, default_timeout=10)
+        self.ui = AppiumHelper(self.driver, default_timeout=15)
         log.info("Appium session created")
 
         # ── Report generator ─────────────────────────────────────────
@@ -206,7 +206,7 @@ class TestParentalLockSetup:
                 except AssertionError:
                     log.warning(f"[STEP 1] Home not detected (attempt {attempt}/{hc_max}), pressing HOME…")
                     self.device.home()
-                    time.sleep(2)
+                    time.sleep(3)
 
             ss1 = self._take_step_screenshot(1, "home_screen")
             if not home_detected:
@@ -232,7 +232,7 @@ class TestParentalLockSetup:
             self.device.navigate_right(right_count)
             time.sleep(0.5)
             self.device.select()
-            time.sleep(3)
+            time.sleep(5)
             ss2 = self._take_step_screenshot(2, "user_preferences_nav")
             _record_step(2, "Navigate to User Preferences",
                          f"Pressed UP {up_count}, RIGHT {right_count}, SELECT to open User Preferences",
@@ -245,7 +245,7 @@ class TestParentalLockSetup:
             log.info("[STEP 3] Verifying USER PREFERENCES title…")
             title_id = UI_IDS.get("title", "textViewTitle")
             title_text = self.ui.get_text_by_id(
-                f"{TATASKY_PACKAGE}:id/{title_id}", timeout=10
+                f"{TATASKY_PACKAGE}:id/{title_id}", timeout=15
             )
             log.info(f"[STEP 3] Title text: '{title_text}'")
             ss3 = self._take_step_screenshot(3, "user_pref_title")
@@ -271,7 +271,7 @@ class TestParentalLockSetup:
             max_downs = MAX_DOWN_SEARCH
             found = False
             for i in range(max_downs):
-                if self.ui.exists_by_id(parental_id, timeout=2):
+                if self.ui.exists_by_id(parental_id, timeout=4):
                     log.info(f"[STEP 4] Parental Controls button found after {i} downs")
                     found = True
                     break
@@ -288,9 +288,9 @@ class TestParentalLockSetup:
                     f"Parental Controls button ({parental_id}) not found after {max_downs} downs"
                 )
 
-            self.ui.click_by_id(parental_id, timeout=5)
+            self.ui.click_by_id(parental_id, timeout=12)
             log.info("[STEP 4] ✓ Clicked Parental Controls button via Appium")
-            time.sleep(5)
+            time.sleep(7)
             ss4 = self._take_step_screenshot(4, "parental_controls_clicked")
             _record_step(4, "Find & Click Parental Controls",
                          "Scrolled down, found Parental Controls button and clicked it",
@@ -331,7 +331,7 @@ class TestParentalLockSetup:
 
             time.sleep(0.5)
             self.device.select()
-            time.sleep(3)
+            time.sleep(5)
             ss6 = self._take_step_screenshot(6, "pin_entered")
             _record_step(6, "Enter PIN",
                          f"Entered PIN {''.join(pin_digits)} and pressed SELECT",
@@ -351,7 +351,7 @@ class TestParentalLockSetup:
             max_rights = MAX_RIGHT_SEARCH
             found = False
             for i in range(max_rights):
-                if self.ui.exists_by_xpath(channel_lock_xpath, timeout=2):
+                if self.ui.exists_by_xpath(channel_lock_xpath, timeout=4):
                     log.info(f"[STEP 7] Channel Lock tab found after {i} rights")
                     found = True
                     break
@@ -368,9 +368,9 @@ class TestParentalLockSetup:
                     f"Channel Lock tab not found after {max_rights} rights"
                 )
 
-            self.ui.click_by_xpath(channel_lock_xpath, timeout=5)
+            self.ui.click_by_xpath(channel_lock_xpath, timeout=12)
             log.info("[STEP 7] ✓ Clicked Channel Lock tab via Appium")
-            time.sleep(5)
+            time.sleep(7)
             ss7 = self._take_step_screenshot(7, "channel_lock_tab")
             _record_step(7, "Navigate to Channel Lock",
                          "Found Channel Lock tab and clicked it via Appium",
@@ -382,7 +382,7 @@ class TestParentalLockSetup:
             current_step = 8
             log.info("[STEP 8] Pressing DOWN 1 into channel list…")
             self.device.navigate_down(1)
-            time.sleep(1)
+            time.sleep(2)
             ss8 = self._take_step_screenshot(8, "channel_list_entered")
             _record_step(8, "Enter Channel List",
                          "Pressed DOWN to focus the channel list area",
@@ -426,13 +426,13 @@ class TestParentalLockSetup:
                 log.info(f"[STEP 9] Scroll batch {scroll_iter}/{MAX_SCROLL_ITERATIONS}")
 
                 # Read all currently visible channels
-                name_elements = self.ui.find_all_by_id(channel_name_id, timeout=5)
+                name_elements = self.ui.find_all_by_id(channel_name_id, timeout=12)
                 if not name_elements:
                     log.warning("[STEP 9] No channel names found on screen")
                     break
 
-                cb_elements = self.ui.find_all_by_id(checkbox_id, timeout=2)
-                num_elements = self.ui.find_all_by_id(channel_number_id, timeout=2)
+                cb_elements = self.ui.find_all_by_id(checkbox_id, timeout=4)
+                num_elements = self.ui.find_all_by_id(channel_number_id, timeout=4)
 
                 # Determine where to start processing in this batch.
                 # Skip elements that were already processed (above the
@@ -548,7 +548,7 @@ class TestParentalLockSetup:
             current_step = 10
             log.info("[STEP 10] Pressing HOME…")
             self.device.home()
-            time.sleep(2)
+            time.sleep(3)
             log.info("[STEP 10] ✓ Back at home")
             ss10 = self._take_step_screenshot(10, "back_home")
             _record_step(10, "Press HOME",

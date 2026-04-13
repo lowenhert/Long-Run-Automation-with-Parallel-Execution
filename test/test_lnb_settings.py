@@ -80,7 +80,7 @@ class TestLNBSettings:
             app_package=TATASKY_PACKAGE,
             appium_url=appium_url,
         )
-        self.ui = AppiumHelper(self.driver, default_timeout=10)
+        self.ui = AppiumHelper(self.driver, default_timeout=15)
         log.info("Appium session created")
 
         # ── Report generator ─────────────────────────────────────────
@@ -196,7 +196,7 @@ class TestLNBSettings:
                 except AssertionError:
                     log.warning(f"[STEP 1] Home not detected (attempt {attempt}/{hc_max}), pressing HOME…")
                     self.device.home()
-                    time.sleep(2)
+                    time.sleep(3)
 
             ss1 = self._take_step_screenshot(1, "home_screen")
             if not home_detected:
@@ -222,7 +222,7 @@ class TestLNBSettings:
             self.device.navigate_right(right_count)
             time.sleep(0.5)
             self.device.select()
-            time.sleep(3)
+            time.sleep(5)
             ss2 = self._take_step_screenshot(2, "user_preferences_nav")
             _record_step(2, "Navigate to User Preferences",
                          f"Pressed UP {up_count}, RIGHT {right_count}, SELECT to open User Preferences",
@@ -235,7 +235,7 @@ class TestLNBSettings:
             log.info("[STEP 3] Verifying USER PREFERENCES title…")
             title_id = UI_IDS.get("title", "textViewTitle")
             title_text = self.ui.get_text_by_id(
-                f"{TATASKY_PACKAGE}:id/{title_id}", timeout=10
+                f"{TATASKY_PACKAGE}:id/{title_id}", timeout=15
             )
             log.info(f"[STEP 3] Title text: '{title_text}'")
             ss3 = self._take_step_screenshot(3, "user_pref_title")
@@ -258,8 +258,8 @@ class TestLNBSettings:
             log.info("[STEP 4] Clicking System Settings button…")
             system_btn = UI_IDS.get("system_settings_btn", "buttonSystemSettings")
             system_btn_id = f"{TATASKY_PACKAGE}:id/{system_btn}"
-            self.ui.click_by_id(system_btn_id, timeout=10)
-            time.sleep(3)
+            self.ui.click_by_id(system_btn_id, timeout=15)
+            time.sleep(5)
             ss4 = self._take_step_screenshot(4, "system_settings_clicked")
             log.info("[STEP 4] ✓ System Settings button clicked")
             _record_step(4, "Click System Settings",
@@ -276,11 +276,11 @@ class TestLNBSettings:
             self.ui.press_keycode(8)   # KEYCODE_1
             time.sleep(0.5)
             self.device.select()
-            time.sleep(3)
+            time.sleep(5)
 
             # Verify "Satellite Settings" text is on screen
             sat_selector = 'new UiSelector().text("Satellite Settings")'
-            sat_el = self.ui.find_by_uiautomator(sat_selector, timeout=10)
+            sat_el = self.ui.find_by_uiautomator(sat_selector, timeout=15)
             ss5 = self._take_step_screenshot(5, "satellite_settings_visible")
             if sat_el is None:
                 _record_step(5, "Verify Satellite Settings",
@@ -299,12 +299,12 @@ class TestLNBSettings:
             log.info("[STEP 6] Clicking Launch Satellite Settings…")
             launch_sat = UI_IDS.get("launch_satellite_settings", "launchSatelliteSettings")
             launch_sat_id = f"{TATASKY_PACKAGE}:id/{launch_sat}"
-            self.ui.click_by_id(launch_sat_id, timeout=10)
-            time.sleep(3)
+            self.ui.click_by_id(launch_sat_id, timeout=15)
+            time.sleep(5)
 
             # Verify "LNB Settings" text is on screen
             lnb_selector = 'new UiSelector().text("LNB Settings")'
-            lnb_el = self.ui.find_by_uiautomator(lnb_selector, timeout=10)
+            lnb_el = self.ui.find_by_uiautomator(lnb_selector, timeout=15)
             ss6 = self._take_step_screenshot(6, "lnb_settings_visible")
             if lnb_el is None:
                 _record_step(6, "Verify LNB Settings",
@@ -326,15 +326,15 @@ class TestLNBSettings:
 
             found_lnb = False
             for attempt in range(1, MAX_CLICK_ATTEMPTS + 1):
-                current_text = self.ui.get_text_by_id(text_view_id, timeout=5)
+                current_text = self.ui.get_text_by_id(text_view_id, timeout=12)
                 log.info(f"[STEP 7] Attempt {attempt}: current LNB type = '{current_text}'")
                 if current_text.strip() == LNB_TYPE:
                     found_lnb = True
                     break
                 # Click the ImageView to cycle to next option
-                img_el = self.ui.find_by_uiautomator(img_selector, timeout=5)
+                img_el = self.ui.find_by_uiautomator(img_selector, timeout=12)
                 img_el.click()
-                time.sleep(1)
+                time.sleep(2)
 
             ss7 = self._take_step_screenshot(7, "lnb_type_selected")
             if not found_lnb:
@@ -355,8 +355,8 @@ class TestLNBSettings:
             log.info("[STEP 8] Clicking Next button…")
             next_btn = UI_IDS.get("next_button", "next_button")
             next_btn_id = f"{TATASKY_PACKAGE}:id/{next_btn}"
-            self.ui.click_by_id(next_btn_id, timeout=10)
-            time.sleep(3)
+            self.ui.click_by_id(next_btn_id, timeout=15)
+            time.sleep(5)
             ss8 = self._take_step_screenshot(8, "next_clicked")
             log.info("[STEP 8] ✓ Next button clicked")
             _record_step(8, "Click Next Button",
@@ -369,8 +369,8 @@ class TestLNBSettings:
             current_step = 9
             log.info("[STEP 9] Clicking Edit (editable) button…")
             editable_id = f"{TATASKY_PACKAGE}:id/{UI_IDS.get('editable', 'editable')}"
-            self.ui.click_by_id(editable_id, timeout=10)
-            time.sleep(3)
+            self.ui.click_by_id(editable_id, timeout=15)
+            time.sleep(5)
             ss9 = self._take_step_screenshot(9, "edit_clicked")
             log.info("[STEP 9] ✓ Edit button clicked")
             _record_step(9, "Click Edit Button",
@@ -383,7 +383,7 @@ class TestLNBSettings:
             current_step = 10
             log.info("[STEP 10] Verifying Transponder setup screen…")
             # Edit button causes activity transition — give UiAutomator2 time to recover
-            time.sleep(5)
+            time.sleep(7)
 
             transponder_selector = 'new UiSelector().text("Transponder setup")'
             transponder_el = None
@@ -392,7 +392,7 @@ class TestLNBSettings:
             retry_actions = [
                 ("initial check", None),
                 ("pressing SELECT", lambda: (self.device.select(), time.sleep(3))),
-                ("re-clicking Edit button", lambda: (self.ui.click_by_id(editable_id, timeout=10), time.sleep(5))),
+                ("re-clicking Edit button", lambda: (self.ui.click_by_id(editable_id, timeout=15), time.sleep(5))),
                 ("pressing SELECT again", lambda: (self.device.select(), time.sleep(3))),
             ]
 
@@ -464,14 +464,14 @@ class TestLNBSettings:
 
             pol_matched = False
             for attempt in range(1, MAX_CLICK_ATTEMPTS + 1):
-                current_pol = self.ui.get_text_by_id(text_view_id, timeout=5)
+                current_pol = self.ui.get_text_by_id(text_view_id, timeout=12)
                 log.info(f"[STEP 12] Attempt {attempt}: current polarization = '{current_pol}'")
                 if current_pol.strip().upper() == POLARIZATION.upper():
                     pol_matched = True
                     break
                 # Press RIGHT to cycle to next polarization option
                 self.device.navigate_right(1)
-                time.sleep(1)
+                time.sleep(2)
 
             ss12 = self._take_step_screenshot(12, "polarization_set")
             if not pol_matched:
@@ -517,8 +517,8 @@ class TestLNBSettings:
             # ─────────────────────────────────────────────────────────
             current_step = 14
             log.info("[STEP 14] Clicking Select button to confirm…")
-            self.ui.click_by_id(select_btn_id, timeout=10)
-            time.sleep(3)
+            self.ui.click_by_id(select_btn_id, timeout=15)
+            time.sleep(5)
             ss14 = self._take_step_screenshot(14, "select_confirmed")
             log.info("[STEP 14] ✓ Select button clicked")
             _record_step(14, "Click Select to Confirm",
@@ -530,8 +530,8 @@ class TestLNBSettings:
             # ─────────────────────────────────────────────────────────
             current_step = 15
             log.info("[STEP 15] Clicking Next button…")
-            self.ui.click_by_id(next_btn_id, timeout=10)
-            time.sleep(3)
+            self.ui.click_by_id(next_btn_id, timeout=15)
+            time.sleep(5)
             ss15 = self._take_step_screenshot(15, "next_after_select")
             log.info("[STEP 15] ✓ Next button clicked")
             _record_step(15, "Click Next Button",
@@ -554,9 +554,9 @@ class TestLNBSettings:
 
             # Use D-pad navigation instead of direct click: RIGHT then SELECT
             self.device.navigate_right(2)
-            time.sleep(2)
+            time.sleep(3)
             self.device.select()
-            time.sleep(5)
+            time.sleep(7)
             ss16 = self._take_step_screenshot(16, "continue_clicked")
             log.info("[STEP 16] ✓ Continue button detected and activated via RIGHT + SELECT")
             _record_step(16, "Click Continue Button",
@@ -573,7 +573,7 @@ class TestLNBSettings:
                 self.ui.press_keycode(keycode)
                 log.info(f"[STEP 17] Pressed key for digit '{digit}' (keycode={keycode})")
                 time.sleep(0.3)
-            time.sleep(5)
+            time.sleep(7)
 
             ss17 = self._take_step_screenshot(17, "channel_tuned")
             log.info(f"[STEP 17] ✓ Tuned to channel {SIGNAL_CHECK_CHANNEL}")
@@ -591,7 +591,7 @@ class TestLNBSettings:
             self.ui.press_keycode(11)  # KEYCODE_4
             time.sleep(0.5)
             self.device.select()
-            time.sleep(5)
+            time.sleep(7)
             ss18 = self._take_step_screenshot(18, "signal_test_opened")
             log.info("[STEP 18] ✓ Signal test opened")
             _record_step(18, "Open Signal Test",

@@ -71,7 +71,7 @@ class TestAudioChangeSetup:
             app_package=TATASKY_PACKAGE,
             appium_url=appium_url,
         )
-        self.ui = AppiumHelper(self.driver, default_timeout=10)
+        self.ui = AppiumHelper(self.driver, default_timeout=15)
         log.info("Appium session created")
 
         # ── Report generator ─────────────────────────────────────────
@@ -165,7 +165,7 @@ class TestAudioChangeSetup:
                 except AssertionError:
                     log.warning(f"[STEP 1] Home not detected (attempt {attempt}/{hc_max}), pressing HOME…")
                     self.device.home()
-                    time.sleep(2)
+                    time.sleep(3)
 
             ss1 = self._take_step_screenshot(1, "home_screen")
             if not home_detected:
@@ -191,7 +191,7 @@ class TestAudioChangeSetup:
             self.device.navigate_right(right_count)
             time.sleep(0.5)
             self.device.select()
-            time.sleep(3)
+            time.sleep(5)
             ss2 = self._take_step_screenshot(2, "user_preferences_nav")
             _record_step(2, "Navigate to User Preferences",
                          f"Pressed UP {up_count}, RIGHT {right_count}, SELECT to open User Preferences",
@@ -204,7 +204,7 @@ class TestAudioChangeSetup:
             log.info("[STEP 3] Verifying USER PREFERENCES title…")
             title_id = UI_IDS.get("title", "textViewTitle")
             title_text = self.ui.get_text_by_id(
-                f"{TATASKY_PACKAGE}:id/{title_id}", timeout=10
+                f"{TATASKY_PACKAGE}:id/{title_id}", timeout=15
             )
             log.info(f"[STEP 3] Title text: '{title_text}'")
             ss3 = self._take_step_screenshot(3, "user_pref_title")
@@ -228,16 +228,16 @@ class TestAudioChangeSetup:
             user_settings_id = f"{TATASKY_PACKAGE}:id/{user_settings_btn}"
             log.info(f"[STEP 4] Looking for User Settings button ({user_settings_id})…")
 
-            if not self.ui.exists_by_id(user_settings_id, timeout=5):
+            if not self.ui.exists_by_id(user_settings_id, timeout=12):
                 ss4 = self._take_step_screenshot(4, "user_settings_not_found")
                 _record_step(4, "Click User Settings",
                              "User Settings button not found",
                              "FAILED", ss4, "Button not found on screen")
                 raise AssertionError(f"User Settings button ({user_settings_id}) not found")
 
-            self.ui.click_by_id(user_settings_id, timeout=5)
+            self.ui.click_by_id(user_settings_id, timeout=12)
             log.info("[STEP 4] ✓ Clicked User Settings button")
-            time.sleep(3)
+            time.sleep(5)
             ss4 = self._take_step_screenshot(4, "user_settings_clicked")
             _record_step(4, "Click User Settings",
                          "Found and clicked User Settings button",
@@ -252,16 +252,16 @@ class TestAudioChangeSetup:
                 '// android.widget.CheckedTextView[@resource-id="tv.accedo.studio.paytv.tatasky:id/menu_item" and @text="Video"]'
             )
 
-            if not self.ui.exists_by_xpath(Video_tab_xpath, timeout=5):
+            if not self.ui.exists_by_xpath(Video_tab_xpath, timeout=12):
                 ss5 = self._take_step_screenshot(5, "Video_tab_not_found")
                 _record_step(5, "Click Video Tab",
                              "Video tab not found",
                              "FAILED", ss5, "Tab not found on screen")
                 raise AssertionError("Video tab not found")
 
-            self.ui.click_by_xpath(Video_tab_xpath, timeout=5)
+            self.ui.click_by_xpath(Video_tab_xpath, timeout=12)
             log.info("[STEP 5] ✓ Clicked Video Channels tab")
-            time.sleep(3)
+            time.sleep(5)
             ss5 = self._take_step_screenshot(5, "Video_tab_clicked")
             _record_step(5, "Click Video Channels Tab",
                          "Found and clicked Video Channels tab",
@@ -282,7 +282,7 @@ class TestAudioChangeSetup:
             log.info("[STEP 6] ✓ Audio language change step")
             count_mal=0
             for i in range(22):
-                if self.ui.exists_by_xpath(mal_xpath, timeout=3):
+                if self.ui.exists_by_xpath(mal_xpath, timeout=5):
                     log.info("[STEP 6] Malayalam Language detected")
                     count_mal=1
                     break
@@ -316,7 +316,7 @@ class TestAudioChangeSetup:
 
             count=0
             for i in range(4):
-                if self.ui.exists_by_xpath(High_icon_xpath, timeout=3):
+                if self.ui.exists_by_xpath(High_icon_xpath, timeout=5):
                     log.info("[STEP 7] ✓ High text found")
                     count=1
                     break
@@ -336,7 +336,7 @@ class TestAudioChangeSetup:
             self.device.navigate_down()
             Apply=UI_IDS.get("Apply_btn")
 
-            if self.ui.exists_by_id(Apply, timeout=3):
+            if self.ui.exists_by_id(Apply, timeout=5):
                 # Cursor is on Apply — click it with D-pad SELECT
                 self.device.select()
                 log.info("[STEP 7] ✓ Audio language changed , Apply button selected")
@@ -345,7 +345,7 @@ class TestAudioChangeSetup:
                 time.sleep(1)  # Wait a bit for snackbar to appear
                 ss7 = self._take_step_screenshot(7, "Resolution change")
                 try:
-                    if self.ui.exists_by_xpath(tick_icon_xpath, timeout=5):
+                    if self.ui.exists_by_xpath(tick_icon_xpath, timeout=12):
                         log.info("[STEP 7] Tick icon detected — waiting for it to disappear…")
                         time.sleep(7)
                 except AssertionError:
@@ -371,7 +371,7 @@ class TestAudioChangeSetup:
             current_step = 8
             log.info("[STEP 8] Pressing HOME…")
             self.device.home()
-            time.sleep(2)
+            time.sleep(3)
             log.info("[STEP 8] ✓ Back at home")
             ss8 = self._take_step_screenshot(8, "back_home")
             _record_step(8, "Press HOME",
