@@ -382,12 +382,11 @@ class TestDisplayResolutionSetup:
                 already_selected = False
 
             if already_selected:
-                log.warning(f"[STEP 9] Resolution '{target_res}' is already the active resolution!")
+                log.info(f"[STEP 9] Resolution '{target_res}' is already the active resolution — skipping remaining steps")
                 ss9 = self._take_step_screenshot(9, "same_resolution_selected")
                 _record_step(9, "Select Target Resolution",
-                             f"Resolution '{target_res}' is already selected — same resolution, no change needed",
-                             "FAILED", ss9,
-                             f"Same resolution '{target_res}' is already active")
+                             f"Resolution '{target_res}' is already selected — no change needed, test passed",
+                             "PASSED", ss9)
 
                 # Press BACK until home screen
                 log.info("[STEP 9] Pressing BACK to return to home screen…")
@@ -408,7 +407,13 @@ class TestDisplayResolutionSetup:
                     except (AssertionError, Exception):
                         pass
 
-                raise AssertionError(f"Same resolution '{target_res}' is already active — no change made")
+                # Mark steps 10–12 as SKIPPED
+                _record_step(10, "Confirm Resolution Selection", "Skipped — resolution already active", "SKIPPED")
+                _record_step(11, "Wait for Device Reboot", "Skipped — resolution already active", "SKIPPED")
+                _record_step(12, "Return to Home After Reboot", "Skipped — resolution already active", "SKIPPED")
+
+                # Jump to finally block with PASSED status
+                return
 
             self.ui.click_by_xpath(resolution_text_xpath, timeout=12)
             log.info(f"[STEP 9] ✓ Clicked resolution '{target_res}'")

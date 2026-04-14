@@ -70,7 +70,7 @@ remote_pairing:
     summary: "android:id/summary"
   expected_texts:
     settings: "Settings"
-    remotes_accessories: "Remotes and accessories"
+    remotes_accessories: "Remotes & accessories"
     connected: "Connected"
     searching: "Searching for accessories"
   max_back_presses: 10                 # max BACK presses to return to home screen
@@ -151,7 +151,7 @@ display_resolution:
     region: [90, 120, 260, 180]        # x, y, width, height
     threshold: 0.60
     max_attempts: 4
-  target_resolution: "3840x2160p50"    # resolution text to select (change this to any available option)
+  target_resolution: "1080p50"    # resolution text to select (change this to any available option)
   reboot_wait_seconds: 90              # seconds to wait for device reboot after resolution change
   max_home_presses: 15                 # max HOME presses to detect home after reboot
   display_down_presses: 11             # DOWN presses from Device Preferences to reach Display

@@ -249,23 +249,39 @@ class TestRemotePairing:
             # ─────────────────────────────────────────────────────────
             current_step = 4
             log.info("[STEP 4] Clicking 'Remotes and accessories'…")
-            remotes_text = EXPECTED.get("remotes_accessories", "Remotes and accessories")
-            menu_title_id = UI_IDS.get("menu_item_title", "android:id/title")
-            remotes_xpath = (
-                f'//android.widget.TextView'
-                f'[@resource-id="{menu_title_id}" '
-                f'and @text="{remotes_text}"]'
-            )
+            remotes_text = EXPECTED.get("remotes_accessories", "Remotes & accessories")
+            remotes_uia = f'new UiSelector().text("{remotes_text}")'
 
-            if not self.ui.exists_by_xpath(remotes_xpath, timeout=12):
+            remotes_clicked = False
+            max_retries = 3
+            for _attempt in range(1, max_retries + 1):
+                log.info(f"[STEP 4] Attempt {_attempt}/{max_retries} — finding element…")
+                try:
+                    remotes_el = self.ui.find_by_uiautomator(remotes_uia, timeout=12)
+                    remotes_el.click()
+                    remotes_clicked = True
+                    break
+                except Exception as e:
+                    log.warning(f"[STEP 4] UiAutomator attempt {_attempt} failed: {e}")
+                    if _attempt < max_retries:
+                        time.sleep(3)
+                        # Fallback: try click_by_text (XPath-based)
+                        try:
+                            log.info(f"[STEP 4] Trying click_by_text fallback…")
+                            self.ui.click_by_text(remotes_text, timeout=12)
+                            remotes_clicked = True
+                            break
+                        except Exception as e2:
+                            log.warning(f"[STEP 4] click_by_text fallback also failed: {e2}")
+                            time.sleep(3)
+
+            if not remotes_clicked:
                 ss4 = self._take_step_screenshot(4, "remotes_not_found")
                 _record_step(4, "Click Remotes and Accessories",
-                             f"'{remotes_text}' not found on Settings screen",
+                             f"'{remotes_text}' not found on Settings screen after {max_retries} attempts",
                              "FAILED", ss4,
                              f"'{remotes_text}' menu item not found")
                 raise AssertionError(f"'{remotes_text}' menu item not found")
-
-            self.ui.click_by_xpath(remotes_xpath, timeout=12)
             log.info("[STEP 4] ✓ Clicked 'Remotes and accessories'")
             time.sleep(5)
             ss4 = self._take_step_screenshot(4, "remotes_clicked")
@@ -299,6 +315,7 @@ class TestRemotePairing:
             # ─────────────────────────────────────────────────────────
             current_step = 6
             log.info("[STEP 6] Checking for connected remote…")
+            menu_title_id = UI_IDS.get("menu_item_title", "android:id/title")
             list_id = UI_IDS.get("list_id", "com.android.tv.settings:id/list")
             summary_id = UI_IDS.get("summary", "android:id/summary")
             connected_text = EXPECTED.get("connected", "Connected")
@@ -333,18 +350,16 @@ class TestRemotePairing:
                 list_count = len(list_items) if list_items else 0
                 log.info(f"[STEP 6] List items found: {list_count}")
 
-                # Check for "Connected" summary text
-                summary_elements = self.ui.find_all_by_id(summary_id, timeout=5)
+                # Check for "Connected" summary text using UiAutomator
+                connected_uia = f'new UiSelector().resourceId("{summary_id}").text("{connected_text}")'
                 has_connected = False
-                for el in summary_elements:
-                    try:
-                        el_text = el.text.strip()
-                        log.info(f"[STEP 6] Summary element text: '{el_text}'")
-                        if connected_text.upper() in el_text.upper():
-                            has_connected = True
-                            break
-                    except Exception:
-                        continue
+                try:
+                    connected_el = self.ui.find_by_uiautomator(connected_uia, timeout=8)
+                    if connected_el:
+                        log.info(f"[STEP 6] Found summary element with text '{connected_text}' via UiAutomator")
+                        has_connected = True
+                except Exception:
+                    log.info(f"[STEP 6] '{connected_text}' summary not found via UiAutomator")
 
                 ss6 = self._take_step_screenshot(6, "remote_check")
 
